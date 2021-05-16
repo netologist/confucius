@@ -3,7 +3,6 @@
     <a href="https://travis-ci.org/hasanozgan/confucius"><img src="https://travis-ci.org/hasanozgan/confucius.svg?branch=master" alt="build status" title="build status"/></a>
     <a href="https://github.com/hasanozgan/confucius/releases"><img src="https://img.shields.io/github/v/tag/hasanozgan/confucius" alt="semver tag" title="semver tag"/></a>
     <a href="https://goreportcard.com/report/github.com/hasanozgan/confucius"><img src="https://goreportcard.com/badge/github.com/hasanozgan/confucius" alt="go report card" title="go report card"/></a>
-    <a href="https://coveralls.io/github/hasanozgan/confucius?branch=master"><img src="https://coveralls.io/repos/github/hasanozgan/confucius/badge.svg?branch=master" alt="coverage status" title="coverage status"/></a>
     <a href="https://github.com/hasanozgan/confucius/blob/master/LICENSE"><img src="https://img.shields.io/github/license/hasanozgan/confucius" alt="license" title="license"/></a>
 </p>
 
