@@ -19,7 +19,7 @@ I added extra features in project and send a PR. But they were not accepted. Tha
 - Optionally **load from the environment** as well
 - Optionally **profiles** as well
 - Set environment variable in config file with default value
-- Only **3** external dependencies
+- Only **4** external dependencies
 - Full support for`time.Time` & `time.Duration`
 - Tiny API
 - Decoders for `.yaml`, `.json` and `.toml` files
