@@ -1,4 +1,4 @@
-package fig
+package confucius
 
 import (
 	"errors"
@@ -12,68 +12,68 @@ import (
 )
 
 type Pod struct {
-	APIVersion string `fig:"apiVersion" default:"v1"`
-	Kind       string `fig:"kind" validate:"required"`
+	APIVersion string `conf:"apiVersion" default:"v1"`
+	Kind       string `conf:"kind" validate:"required"`
 	Metadata   struct {
-		Name           string        `fig:"name"`
-		Environments   []string      `fig:"environments" default:"[dev,staging,prod]"`
-		Master         bool          `fig:"master" validate:"required"`
-		MaxPercentUtil *float64      `fig:"maxPercentUtil" default:"0.5"`
-		Retry          time.Duration `fig:"retry" default:"10s"`
-	} `fig:"metadata"`
-	Spec Spec `fig:"spec"`
+		Name           string        `conf:"name"`
+		Environments   []string      `conf:"environments" default:"[dev,staging,prod]"`
+		Master         bool          `conf:"master" validate:"required"`
+		MaxPercentUtil *float64      `conf:"maxPercentUtil" default:"0.5"`
+		Retry          time.Duration `conf:"retry" default:"10s"`
+	} `conf:"metadata"`
+	Spec Spec `conf:"spec"`
 }
 
 type Spec struct {
-	Containers []Container `fig:"containers"`
-	Volumes    []*Volume   `fig:"volumes"`
+	Containers []Container `conf:"containers"`
+	Volumes    []*Volume   `conf:"volumes"`
 }
 
 type Container struct {
-	Name      string   `fig:"name" validate:"required"`
-	Image     string   `fig:"image" validate:"required"`
-	Command   []string `fig:"command"`
-	Env       []Env    `fig:"env"`
-	Ports     []Port   `fig:"ports"`
+	Name      string   `conf:"name" validate:"required"`
+	Image     string   `conf:"image" validate:"required"`
+	Command   []string `conf:"command"`
+	Env       []Env    `conf:"env"`
+	Ports     []Port   `conf:"ports"`
 	Resources struct {
 		Limits struct {
-			CPU string `fig:"cpu"`
-		} `fig:"limits"`
+			CPU string `conf:"cpu"`
+		} `conf:"limits"`
 		Requests *struct {
-			Memory string  `fig:"memory" default:"64Mi"`
-			CPU    *string `fig:"cpu" default:"250m"`
+			Memory string  `conf:"memory" default:"64Mi"`
+			CPU    *string `conf:"cpu" default:"250m"`
 		}
-	} `fig:"resources"`
-	VolumeMounts []VolumeMount `fig:"volumeMounts"`
+	} `conf:"resources"`
+	VolumeMounts []VolumeMount `conf:"volumeMounts"`
 }
 
 type Env struct {
-	Name  string `fig:"name"`
-	Value string `fig:"value"`
+	Name  string `conf:"name"`
+	Value string `conf:"value"`
 }
 
 type Port struct {
-	ContainerPort int `fig:"containerPort" validate:"required"`
+	ContainerPort int `conf:"containerPort" validate:"required"`
 }
 
 type VolumeMount struct {
-	MountPath string `fig:"mountPath" validate:"required"`
-	Name      string `fig:"name" validate:"required"`
+	MountPath string `conf:"mountPath" validate:"required"`
+	Name      string `conf:"name" validate:"required"`
 }
 
 type Volume struct {
-	Name      string     `fig:"name" validate:"required"`
-	ConfigMap *ConfigMap `fig:"configMap"`
+	Name      string     `conf:"name" validate:"required"`
+	ConfigMap *ConfigMap `conf:"configMap"`
 }
 
 type ConfigMap struct {
-	Name  string `fig:"name" validate:"required"`
-	Items []Item `fig:"items" validate:"required"`
+	Name  string `conf:"name" validate:"required"`
+	Items []Item `conf:"items" validate:"required"`
 }
 
 type Item struct {
-	Key  string `fig:"key" validate:"required"`
-	Path string `fig:"path" validate:"required"`
+	Key  string `conf:"key" validate:"required"`
+	Path string `conf:"path" validate:"required"`
 }
 
 func validPodConfig() Pod {
@@ -136,7 +136,7 @@ func validPodConfig() Pod {
 	return pod
 }
 
-func Test_fig_Load(t *testing.T) {
+func Test_confucius_Load(t *testing.T) {
 	for _, f := range []string{"pod.yaml", "pod.json", "pod.toml"} {
 		t.Run(f, func(t *testing.T) {
 			var cfg Pod
@@ -154,7 +154,7 @@ func Test_fig_Load(t *testing.T) {
 	}
 }
 
-func Test_fig_replaceEnvironments(t *testing.T) {
+func Test_confucius_replaceEnvironments(t *testing.T) {
 	os.Setenv("FOO", "XXX")
 	os.Setenv("BAR", "YYY")
 
@@ -186,7 +186,7 @@ func Test_fig_replaceEnvironments(t *testing.T) {
 	}
 }
 
-func Test_fig_Load_If_Env_Set_In_Conf_File(t *testing.T) {
+func Test_confucius_Load_If_Env_Set_In_Conf_File(t *testing.T) {
 	os.Setenv("POD_NAME", "ehcache")
 	for _, f := range []string{"pod.yaml", "pod.json", "pod.toml"} {
 		t.Run(f, func(t *testing.T) {
@@ -206,11 +206,11 @@ func Test_fig_Load_If_Env_Set_In_Conf_File(t *testing.T) {
 	}
 }
 
-func Test_fig_Load_FileNotFound(t *testing.T) {
-	fig := defaultFig()
-	fig.filename = "abrakadabra"
+func Test_confucius_Load_FileNotFound(t *testing.T) {
+	confucius := defaultConfucius()
+	confucius.filename = "abrakadabra"
 	var cfg Pod
-	err := fig.Load(&cfg)
+	err := confucius.Load(&cfg)
 	if err == nil {
 		t.Fatalf("expected err")
 	}
@@ -219,21 +219,21 @@ func Test_fig_Load_FileNotFound(t *testing.T) {
 	}
 }
 
-func Test_fig_Load_NonStructPtr(t *testing.T) {
+func Test_confucius_Load_NonStructPtr(t *testing.T) {
 	cfg := struct {
 		X int
 	}{}
-	fig := defaultFig()
-	err := fig.Load(cfg)
+	confucius := defaultConfucius()
+	err := confucius.Load(cfg)
 	if err == nil {
-		t.Fatalf("fig.Load() returned nil error")
+		t.Fatalf("confucius.Load() returned nil error")
 	}
 	if !strings.Contains(err.Error(), "pointer") {
 		t.Errorf("expected struct pointer err, got %v", err)
 	}
 }
 
-func Test_fig_Load_Required(t *testing.T) {
+func Test_confucius_Load_Required(t *testing.T) {
 	for _, f := range []string{"pod.yaml", "pod.json", "pod.toml"} {
 		t.Run(f, func(t *testing.T) {
 			var cfg Pod
@@ -265,22 +265,22 @@ func Test_fig_Load_Required(t *testing.T) {
 	}
 }
 
-func Test_fig_Load_Defaults(t *testing.T) {
+func Test_confucius_Load_Defaults(t *testing.T) {
 	t.Run("non-zero values are not overridden", func(t *testing.T) {
 		for _, f := range []string{"server.yaml", "server.json", "server.toml"} {
 			t.Run(f, func(t *testing.T) {
 				type Server struct {
-					Host   string `fig:"host" default:"127.0.0.1"`
-					Ports  []int  `fig:"ports" default:"[80,443]"`
+					Host   string `conf:"host" default:"127.0.0.1"`
+					Ports  []int  `conf:"ports" default:"[80,443]"`
 					Logger struct {
-						LogLevel   string `fig:"log_level" default:"info"`
-						Production bool   `fig:"production"`
+						LogLevel   string `conf:"log_level" default:"info"`
+						Production bool   `conf:"production"`
 						Metadata   struct {
-							Keys []string `fig:"keys" default:"[ts]"`
+							Keys []string `conf:"keys" default:"[ts]"`
 						}
 					}
 					Application struct {
-						BuildDate time.Time `fig:"build_date" default:"2020-01-01T12:00:00Z"`
+						BuildDate time.Time `conf:"build_date" default:"2020-01-01T12:00:00Z"`
 					}
 				}
 
@@ -309,16 +309,16 @@ func Test_fig_Load_Defaults(t *testing.T) {
 		for _, f := range []string{"server.yaml", "server.json", "server.toml"} {
 			t.Run(f, func(t *testing.T) {
 				type Server struct {
-					Host   string `fig:"host" default:"127.0.0.1"`
-					Ports  []int  `fig:"ports" default:"[80,not-a-port]"`
+					Host   string `conf:"host" default:"127.0.0.1"`
+					Ports  []int  `conf:"ports" default:"[80,not-a-port]"`
 					Logger struct {
-						LogLevel string `fig:"log_level" default:"info"`
+						LogLevel string `conf:"log_level" default:"info"`
 						Metadata struct {
-							Keys []string `fig:"keys" validate:"required"`
+							Keys []string `conf:"keys" validate:"required"`
 						}
 					}
 					Application struct {
-						BuildDate time.Time `fig:"build_date" default:"not-a-time"`
+						BuildDate time.Time `conf:"build_date" default:"not-a-time"`
 					}
 				}
 
@@ -350,20 +350,20 @@ func Test_fig_Load_Defaults(t *testing.T) {
 	})
 }
 
-func Test_fig_Load_RequiredAndDefaults(t *testing.T) {
+func Test_confucius_Load_RequiredAndDefaults(t *testing.T) {
 	for _, f := range []string{"server.yaml", "server.json", "server.toml"} {
 		t.Run(f, func(t *testing.T) {
 			type Server struct {
-				Host   string `fig:"host" default:"127.0.0.1"`
-				Ports  []int  `fig:"ports" validate:"required"`
+				Host   string `conf:"host" default:"127.0.0.1"`
+				Ports  []int  `conf:"ports" validate:"required"`
 				Logger struct {
-					LogLevel string `fig:"log_level" validate:"required"`
+					LogLevel string `conf:"log_level" validate:"required"`
 					Metadata struct {
-						Keys []string `fig:"keys" validate:"required"`
+						Keys []string `conf:"keys" validate:"required"`
 					}
 				}
 				Application struct {
-					BuildDate time.Time `fig:"build_date" default:"2020-01-01T12:00:00Z"`
+					BuildDate time.Time `conf:"build_date" default:"2020-01-01T12:00:00Z"`
 				}
 			}
 
@@ -393,7 +393,7 @@ func Test_fig_Load_RequiredAndDefaults(t *testing.T) {
 	}
 }
 
-func Test_fig_Load_WithOptions(t *testing.T) {
+func Test_confucius_Load_WithOptions(t *testing.T) {
 	for _, f := range []string{"server.yaml", "server.json", "server.toml"} {
 		t.Run(f, func(t *testing.T) {
 			type Server struct {
@@ -454,12 +454,12 @@ func Test_fig_Load_WithOptions(t *testing.T) {
 	}
 }
 
-func Test_fig_Load_Server_If_Env_Set_In_Conf_File(t *testing.T) {
+func Test_confucius_Load_Server_If_Env_Set_In_Conf_File(t *testing.T) {
 	os.Setenv("SERVICE_HOST", "192.168.0.128")
 	for _, f := range []string{"server.yaml", "server.json", "server.toml"} {
 		t.Run(f, func(t *testing.T) {
 			type Server struct {
-				Host string `fig:"host"`
+				Host string `conf:"host"`
 			}
 
 			var cfg Server
@@ -477,9 +477,9 @@ func Test_fig_Load_Server_If_Env_Set_In_Conf_File(t *testing.T) {
 	}
 }
 
-func Test_fig_Load_String_Conf_File(t *testing.T) {
+func Test_confucius_Load_String_Conf_File(t *testing.T) {
 	type Server struct {
-		Host string `fig:"host"`
+		Host string `conf:"host"`
 	}
 
 	var cfg Server
@@ -495,10 +495,10 @@ func Test_fig_Load_String_Conf_File(t *testing.T) {
 	}
 }
 
-func Test_fig_Load_And_Merge_String_With_Conf_File(t *testing.T) {
+func Test_confucius_Load_And_Merge_String_With_Conf_File(t *testing.T) {
 	os.Unsetenv("SERVICE_HOST")
 	type Server struct {
-		Host string `fig:"host"`
+		Host string `conf:"host"`
 	}
 
 	var cfg Server
@@ -518,10 +518,10 @@ func Test_fig_Load_And_Merge_String_With_Conf_File(t *testing.T) {
 	}
 }
 
-func Test_fig_Load_And_Merge_String_With_Environment_Variable(t *testing.T) {
+func Test_confucius_Load_And_Merge_String_With_Environment_Variable(t *testing.T) {
 	os.Setenv("SERVICE_HOST", "192.168.0.128")
 	type Server struct {
-		Host string `fig:"host"`
+		Host string `conf:"host"`
 	}
 
 	var cfg Server
@@ -541,9 +541,9 @@ func Test_fig_Load_And_Merge_String_With_Environment_Variable(t *testing.T) {
 	}
 }
 
-func Test_fig_Return_Error_WhenLoad_Reader_Conf_File(t *testing.T) {
+func Test_confucius_Return_Error_WhenLoad_Reader_Conf_File(t *testing.T) {
 	type Server struct {
-		Host string `fig:"host"`
+		Host string `conf:"host"`
 	}
 
 	byteConfig := strings.NewReader(`host: "127.0.0.1"`)
@@ -554,15 +554,15 @@ func Test_fig_Return_Error_WhenLoad_Reader_Conf_File(t *testing.T) {
 	}
 }
 
-func Test_fig_Load_Server_With_Profile(t *testing.T) {
+func Test_confucius_Load_Server_With_Profile(t *testing.T) {
 	for _, f := range []string{"server.yaml", "server.json", "server.toml"} {
 		t.Run(f, func(t *testing.T) {
 			fmt.Println(f)
 			type Server struct {
-				Host   string `fig:"host"`
+				Host   string `conf:"host"`
 				Logger struct {
-					LogLevel string `fig:"log_level" default:"info"`
-					Appender string `fig:"appender"`
+					LogLevel string `conf:"log_level" default:"info"`
+					Appender string `conf:"appender"`
 				}
 				Replicas []string
 			}
@@ -590,7 +590,7 @@ func Test_fig_Load_Server_With_Profile(t *testing.T) {
 	}
 }
 
-func Test_fig_Load_Server_With_Profile_When_Config_Is_Invalid(t *testing.T) {
+func Test_confucius_Load_Server_With_Profile_When_Config_Is_Invalid(t *testing.T) {
 	tests := []struct {
 		name    string
 		file    string
@@ -621,13 +621,13 @@ func Test_fig_Load_Server_With_Profile_When_Config_Is_Invalid(t *testing.T) {
 	}
 }
 
-func Test_fig_findCfgFile(t *testing.T) {
+func Test_confucius_findCfgFile(t *testing.T) {
 	t.Run("finds existing file", func(t *testing.T) {
-		fig := defaultFig()
-		fig.filename = "pod.yaml"
-		fig.dirs = []string{".", "testdata", filepath.Join("testdata", "valid")}
+		confucius := defaultConfucius()
+		confucius.filename = "pod.yaml"
+		confucius.dirs = []string{".", "testdata", filepath.Join("testdata", "valid")}
 
-		file, err := fig.findCfgFile()
+		file, err := confucius.findCfgFile()
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
@@ -639,11 +639,11 @@ func Test_fig_findCfgFile(t *testing.T) {
 	})
 
 	t.Run("non-existing file returns ErrFileNotFound", func(t *testing.T) {
-		fig := defaultFig()
-		fig.filename = "nope.nope"
-		fig.dirs = []string{".", "testdata", filepath.Join("testdata", "valid")}
+		confucius := defaultConfucius()
+		confucius.filename = "nope.nope"
+		confucius.dirs = []string{".", "testdata", filepath.Join("testdata", "valid")}
 
-		file, err := fig.findCfgFile()
+		file, err := confucius.findCfgFile()
 		if err == nil {
 			t.Fatalf("expected err, got file %s", file)
 		}
@@ -653,13 +653,13 @@ func Test_fig_findCfgFile(t *testing.T) {
 	})
 }
 
-func Test_fig_findProfileCfgFile(t *testing.T) {
+func Test_confucius_findProfileCfgFile(t *testing.T) {
 	t.Run("finds existing file", func(t *testing.T) {
-		fig := defaultFig()
-		fig.filename = "server.yaml"
-		fig.dirs = []string{".", "testdata", filepath.Join("testdata", "valid")}
+		confucius := defaultConfucius()
+		confucius.filename = "server.yaml"
+		confucius.dirs = []string{".", "testdata", filepath.Join("testdata", "valid")}
 
-		file, err := fig.findProfileCfgFile("test")
+		file, err := confucius.findProfileCfgFile("test")
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
@@ -671,11 +671,11 @@ func Test_fig_findProfileCfgFile(t *testing.T) {
 	})
 
 	t.Run("non-existing file returns ErrFileNotFound", func(t *testing.T) {
-		fig := defaultFig()
-		fig.filename = "server.yaml"
-		fig.dirs = []string{".", "testdata", filepath.Join("testdata", "valid")}
+		confucius := defaultConfucius()
+		confucius.filename = "server.yaml"
+		confucius.dirs = []string{".", "testdata", filepath.Join("testdata", "valid")}
 
-		file, err := fig.findProfileCfgFile("e2e")
+		file, err := confucius.findProfileCfgFile("e2e")
 		if err == nil {
 			t.Fatalf("expected err, got file %s", file)
 		}
@@ -685,8 +685,8 @@ func Test_fig_findProfileCfgFile(t *testing.T) {
 	})
 }
 
-func Test_fig_decodeFile(t *testing.T) {
-	fig := defaultFig()
+func Test_confucius_decodeFile(t *testing.T) {
+	confucius := defaultConfucius()
 
 	for _, f := range []string{"bad.yaml", "bad.json", "bad.toml"} {
 		t.Run(f, func(t *testing.T) {
@@ -694,7 +694,7 @@ func Test_fig_decodeFile(t *testing.T) {
 			if !fileExists(file) {
 				t.Fatalf("test file %s does not exist", file)
 			}
-			_, err := fig.decodeFile(file)
+			_, err := confucius.decodeFile(file)
 			if err == nil {
 				t.Errorf("received nil error")
 			}
@@ -706,7 +706,7 @@ func Test_fig_decodeFile(t *testing.T) {
 		if !fileExists(file) {
 			t.Fatalf("test file %s does not exist", file)
 		}
-		_, err := fig.decodeFile(file)
+		_, err := confucius.decodeFile(file)
 		if err == nil {
 			t.Fatal("received nil error")
 		}
@@ -716,16 +716,16 @@ func Test_fig_decodeFile(t *testing.T) {
 	})
 
 	t.Run("file does not exist", func(t *testing.T) {
-		_, err := fig.decodeFile("casperthefriendlygho.st")
+		_, err := confucius.decodeFile("casperthefriendlygho.st")
 		if err == nil {
 			t.Fatal("received nil error")
 		}
 	})
 }
 
-func Test_fig_decodeMap(t *testing.T) {
-	fig := defaultFig()
-	fig.tag = "fig"
+func Test_confucius_decodeMap(t *testing.T) {
+	confucius := defaultConfucius()
+	confucius.tag = "conf"
 
 	m := map[string]interface{}{
 		"log_level": "debug",
@@ -737,15 +737,15 @@ func Test_fig_decodeMap(t *testing.T) {
 	}
 
 	var cfg struct {
-		Level    string `fig:"log_level"`
-		Severity int    `fig:"severity" validate:"required"`
+		Level    string `conf:"log_level"`
+		Severity int    `conf:"severity" validate:"required"`
 		Server   struct {
-			Ports  []string `fig:"ports" default:"[443]"`
+			Ports  []string `conf:"ports" default:"[443]"`
 			Secure bool
-		} `fig:"server"`
+		} `conf:"server"`
 	}
 
-	err := fig.decodeMap(m, &cfg)
+	err := confucius.decodeMap(m, &cfg)
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
 	}
@@ -767,11 +767,11 @@ func Test_fig_decodeMap(t *testing.T) {
 	}
 }
 
-func Test_fig_processCfg(t *testing.T) {
+func Test_confucius_processCfg(t *testing.T) {
 	t.Run("slice elements set by env", func(t *testing.T) {
-		fig := defaultFig()
-		fig.tag = "fig"
-		fig.useEnv = true
+		confucius := defaultConfucius()
+		confucius.tag = "conf"
+		confucius.useEnv = true
 
 		os.Clearenv()
 		setenv(t, "A_0_B", "b0")
@@ -789,7 +789,7 @@ func Test_fig_processCfg(t *testing.T) {
 			C int    `default:"5"`
 		}{{B: "boo"}, {B: "boo"}}
 
-		err := fig.processCfg(&cfg)
+		err := confucius.processCfg(&cfg)
 		if err != nil {
 			t.Fatalf("processCfg() returned unexpected error: %v", err)
 		}
@@ -808,9 +808,9 @@ func Test_fig_processCfg(t *testing.T) {
 	})
 
 	t.Run("embedded struct set by env", func(t *testing.T) {
-		fig := defaultFig()
-		fig.useEnv = true
-		fig.tag = "fig"
+		confucius := defaultConfucius()
+		confucius.useEnv = true
+		confucius.tag = "conf"
 
 		type A struct {
 			B string
@@ -820,7 +820,7 @@ func Test_fig_processCfg(t *testing.T) {
 		}
 		type F struct {
 			A
-			C `fig:"cc"`
+			C `conf:"cc"`
 		}
 		cfg := F{}
 
@@ -828,7 +828,7 @@ func Test_fig_processCfg(t *testing.T) {
 		setenv(t, "A_B", "embedded")
 		setenv(t, "CC_D", "7")
 
-		err := fig.processCfg(&cfg)
+		err := confucius.processCfg(&cfg)
 		if err != nil {
 			t.Fatalf("processCfg() returned unexpected error: %v", err)
 		}
@@ -841,13 +841,13 @@ func Test_fig_processCfg(t *testing.T) {
 	})
 }
 
-func Test_fig_processField(t *testing.T) {
-	fig := defaultFig()
-	fig.tag = "fig"
+func Test_confucius_processField(t *testing.T) {
+	confucius := defaultConfucius()
+	confucius.tag = "conf"
 
 	t.Run("field with default", func(t *testing.T) {
 		cfg := struct {
-			X int `fig:"y" default:"10"`
+			X int `conf:"y" default:"10"`
 		}{}
 		parent := &field{
 			v:        reflect.ValueOf(&cfg).Elem(),
@@ -855,8 +855,8 @@ func Test_fig_processField(t *testing.T) {
 			sliceIdx: -1,
 		}
 
-		f := newStructField(parent, 0, fig.tag)
-		err := fig.processField(f)
+		f := newStructField(parent, 0, confucius.tag)
+		err := confucius.processField(f)
 		if err != nil {
 			t.Fatalf("processField() returned unexpected error: %v", err)
 		}
@@ -867,7 +867,7 @@ func Test_fig_processField(t *testing.T) {
 
 	t.Run("field with default does not overwrite", func(t *testing.T) {
 		cfg := struct {
-			X int `fig:"y" default:"10"`
+			X int `conf:"y" default:"10"`
 		}{}
 		cfg.X = 5
 		parent := &field{
@@ -876,8 +876,8 @@ func Test_fig_processField(t *testing.T) {
 			sliceIdx: -1,
 		}
 
-		f := newStructField(parent, 0, fig.tag)
-		err := fig.processField(f)
+		f := newStructField(parent, 0, confucius.tag)
+		err := confucius.processField(f)
 		if err != nil {
 			t.Fatalf("processField() returned unexpected error: %v", err)
 		}
@@ -888,7 +888,7 @@ func Test_fig_processField(t *testing.T) {
 
 	t.Run("field with bad default", func(t *testing.T) {
 		cfg := struct {
-			X int `fig:"y" default:"not-an-int"`
+			X int `conf:"y" default:"not-an-int"`
 		}{}
 		parent := &field{
 			v:        reflect.ValueOf(&cfg).Elem(),
@@ -896,8 +896,8 @@ func Test_fig_processField(t *testing.T) {
 			sliceIdx: -1,
 		}
 
-		f := newStructField(parent, 0, fig.tag)
-		err := fig.processField(f)
+		f := newStructField(parent, 0, confucius.tag)
+		err := confucius.processField(f)
 		if err == nil {
 			t.Fatalf("processField() returned nil error")
 		}
@@ -905,7 +905,7 @@ func Test_fig_processField(t *testing.T) {
 
 	t.Run("field with required", func(t *testing.T) {
 		cfg := struct {
-			X int `fig:"y" validate:"required"`
+			X int `conf:"y" validate:"required"`
 		}{}
 		cfg.X = 10
 		parent := &field{
@@ -914,8 +914,8 @@ func Test_fig_processField(t *testing.T) {
 			sliceIdx: -1,
 		}
 
-		f := newStructField(parent, 0, fig.tag)
-		err := fig.processField(f)
+		f := newStructField(parent, 0, confucius.tag)
+		err := confucius.processField(f)
 		if err != nil {
 			t.Fatalf("processField() returned unexpected error: %v", err)
 		}
@@ -926,7 +926,7 @@ func Test_fig_processField(t *testing.T) {
 
 	t.Run("field with required error", func(t *testing.T) {
 		cfg := struct {
-			X int `fig:"y" validate:"required"`
+			X int `conf:"y" validate:"required"`
 		}{}
 		parent := &field{
 			v:        reflect.ValueOf(&cfg).Elem(),
@@ -934,8 +934,8 @@ func Test_fig_processField(t *testing.T) {
 			sliceIdx: -1,
 		}
 
-		f := newStructField(parent, 0, fig.tag)
-		err := fig.processField(f)
+		f := newStructField(parent, 0, confucius.tag)
+		err := confucius.processField(f)
 		if err == nil {
 			t.Fatalf("processField() returned nil error")
 		}
@@ -943,7 +943,7 @@ func Test_fig_processField(t *testing.T) {
 
 	t.Run("field with default and required", func(t *testing.T) {
 		cfg := struct {
-			X int `fig:"y" default:"10" validate:"required"`
+			X int `conf:"y" default:"10" validate:"required"`
 		}{}
 		parent := &field{
 			v:        reflect.ValueOf(&cfg).Elem(),
@@ -951,24 +951,24 @@ func Test_fig_processField(t *testing.T) {
 			sliceIdx: -1,
 		}
 
-		f := newStructField(parent, 0, fig.tag)
-		err := fig.processField(f)
+		f := newStructField(parent, 0, confucius.tag)
+		err := confucius.processField(f)
 		if err == nil {
 			t.Fatalf("processField() expected error")
 		}
 	})
 
 	t.Run("field overwritten by env", func(t *testing.T) {
-		fig := defaultFig()
-		fig.tag = "fig"
-		fig.useEnv = true
-		fig.envPrefix = "fig"
+		confucius := defaultConfucius()
+		confucius.tag = "conf"
+		confucius.useEnv = true
+		confucius.envPrefix = "confucius"
 
 		os.Clearenv()
-		setenv(t, "FIG_X", "MEN")
+		setenv(t, "CONFUCIUS_X", "MEN")
 
 		cfg := struct {
-			X string `fig:"x"`
+			X string `conf:"x"`
 		}{}
 		cfg.X = "BOYS"
 		parent := &field{
@@ -977,8 +977,8 @@ func Test_fig_processField(t *testing.T) {
 			sliceIdx: -1,
 		}
 
-		f := newStructField(parent, 0, fig.tag)
-		err := fig.processField(f)
+		f := newStructField(parent, 0, confucius.tag)
+		err := confucius.processField(f)
 		if err != nil {
 			t.Fatalf("processField() returned unexpected error: %v", err)
 		}
@@ -988,13 +988,13 @@ func Test_fig_processField(t *testing.T) {
 	})
 
 	t.Run("field with bad env", func(t *testing.T) {
-		fig := defaultFig()
-		fig.tag = "fig"
-		fig.useEnv = true
-		fig.envPrefix = "fig"
+		confucius := defaultConfucius()
+		confucius.tag = "conf"
+		confucius.useEnv = true
+		confucius.envPrefix = "confucius"
 
 		os.Clearenv()
-		setenv(t, "FIG_I", "FIFTY")
+		setenv(t, "CONFUCIUS_I", "FIFTY")
 
 		cfg := struct {
 			I int
@@ -1005,23 +1005,23 @@ func Test_fig_processField(t *testing.T) {
 			sliceIdx: -1,
 		}
 
-		f := newStructField(parent, 0, fig.tag)
-		err := fig.processField(f)
+		f := newStructField(parent, 0, confucius.tag)
+		err := confucius.processField(f)
 		if err == nil {
 			t.Fatalf("processField() returned nil error")
 		}
 	})
 }
 
-func Test_fig_setFromEnv(t *testing.T) {
-	fig := defaultFig()
-	fig.envPrefix = "fig"
+func Test_confucius_setFromEnv(t *testing.T) {
+	confucius := defaultConfucius()
+	confucius.envPrefix = "confucius"
 
 	var s string
 	fv := reflect.ValueOf(&s)
 
 	os.Clearenv()
-	err := fig.setFromEnv(fv, "config.string")
+	err := confucius.setFromEnv(fv, "config.string")
 	if err != nil {
 		t.Fatalf("setFromEnv() unexpected error: %v", err)
 	}
@@ -1029,8 +1029,8 @@ func Test_fig_setFromEnv(t *testing.T) {
 		t.Fatalf("s modified to %s", s)
 	}
 
-	setenv(t, "FIG_CONFIG_STRING", "goroutine")
-	err = fig.setFromEnv(fv, "config.string")
+	setenv(t, "CONFUCIUS_CONFIG_STRING", "goroutine")
+	err = confucius.setFromEnv(fv, "config.string")
 	if err != nil {
 		t.Fatalf("setFromEnv() unexpected error: %v", err)
 	}
@@ -1039,8 +1039,8 @@ func Test_fig_setFromEnv(t *testing.T) {
 	}
 }
 
-func Test_fig_formatEnvKey(t *testing.T) {
-	fig := defaultFig()
+func Test_confucius_formatEnvKey(t *testing.T) {
+	confucius := defaultConfucius()
 
 	for _, tc := range []struct {
 		key    string
@@ -1071,8 +1071,8 @@ func Test_fig_formatEnvKey(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("%s/%s", tc.prefix, tc.key), func(t *testing.T) {
-			fig.envPrefix = tc.prefix
-			got := fig.formatEnvKey(tc.key)
+			confucius.envPrefix = tc.prefix
+			got := confucius.formatEnvKey(tc.key)
 			if got != tc.want {
 				t.Errorf("formatEnvKey() == %s, expected %s", got, tc.want)
 			}
@@ -1080,25 +1080,25 @@ func Test_fig_formatEnvKey(t *testing.T) {
 	}
 }
 
-func Test_fig_setDefaultValue(t *testing.T) {
-	fig := defaultFig()
+func Test_confucius_setDefaultValue(t *testing.T) {
+	confucius := defaultConfucius()
 	var b bool
 	fv := reflect.ValueOf(&b).Elem()
 
-	err := fig.setDefaultValue(fv, "true")
+	err := confucius.setDefaultValue(fv, "true")
 	if err == nil {
 		t.Fatalf("expected err")
 	}
 }
 
-func Test_fig_setValue(t *testing.T) {
-	fig := defaultFig()
+func Test_confucius_setValue(t *testing.T) {
+	confucius := defaultConfucius()
 
 	t.Run("nil ptr", func(t *testing.T) {
 		var s *string
 		fv := reflect.ValueOf(&s)
 
-		err := fig.setValue(fv, "bat")
+		err := confucius.setValue(fv, "bat")
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
@@ -1112,7 +1112,7 @@ func Test_fig_setValue(t *testing.T) {
 		var slice []int
 		fv := reflect.ValueOf(&slice).Elem()
 
-		err := fig.setValue(fv, "5")
+		err := confucius.setValue(fv, "5")
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
@@ -1126,7 +1126,7 @@ func Test_fig_setValue(t *testing.T) {
 		var i int
 		fv := reflect.ValueOf(&i).Elem()
 
-		err := fig.setValue(fv, "-8")
+		err := confucius.setValue(fv, "-8")
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
@@ -1140,7 +1140,7 @@ func Test_fig_setValue(t *testing.T) {
 		var b bool
 		fv := reflect.ValueOf(&b).Elem()
 
-		err := fig.setValue(fv, "true")
+		err := confucius.setValue(fv, "true")
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
@@ -1154,7 +1154,7 @@ func Test_fig_setValue(t *testing.T) {
 		var b bool
 		fv := reflect.ValueOf(&b).Elem()
 
-		err := fig.setValue(fv, "αλήθεια")
+		err := confucius.setValue(fv, "αλήθεια")
 		if err == nil {
 			t.Fatalf("returned nil err")
 		}
@@ -1164,7 +1164,7 @@ func Test_fig_setValue(t *testing.T) {
 		var d time.Duration
 		fv := reflect.ValueOf(&d).Elem()
 
-		err := fig.setValue(fv, "5h")
+		err := confucius.setValue(fv, "5h")
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
@@ -1178,7 +1178,7 @@ func Test_fig_setValue(t *testing.T) {
 		var d time.Duration
 		fv := reflect.ValueOf(&d).Elem()
 
-		err := fig.setValue(fv, "5decades")
+		err := confucius.setValue(fv, "5decades")
 		if err == nil {
 			t.Fatalf("expexted err")
 		}
@@ -1188,7 +1188,7 @@ func Test_fig_setValue(t *testing.T) {
 		var i uint
 		fv := reflect.ValueOf(&i).Elem()
 
-		err := fig.setValue(fv, "42")
+		err := confucius.setValue(fv, "42")
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
@@ -1202,7 +1202,7 @@ func Test_fig_setValue(t *testing.T) {
 		var f float32
 		fv := reflect.ValueOf(&f).Elem()
 
-		err := fig.setValue(fv, "0.015625")
+		err := confucius.setValue(fv, "0.015625")
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
@@ -1216,7 +1216,7 @@ func Test_fig_setValue(t *testing.T) {
 		var f float32
 		fv := reflect.ValueOf(&f).Elem()
 
-		err := fig.setValue(fv, "-i")
+		err := confucius.setValue(fv, "-i")
 		if err == nil {
 			t.Fatalf("expected err")
 		}
@@ -1226,7 +1226,7 @@ func Test_fig_setValue(t *testing.T) {
 		var s string
 		fv := reflect.ValueOf(&s).Elem()
 
-		err := fig.setValue(fv, "bat")
+		err := confucius.setValue(fv, "bat")
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
@@ -1240,12 +1240,12 @@ func Test_fig_setValue(t *testing.T) {
 		var tme time.Time
 		fv := reflect.ValueOf(&tme).Elem()
 
-		err := fig.setValue(fv, "2020-01-01T00:00:00Z")
+		err := confucius.setValue(fv, "2020-01-01T00:00:00Z")
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
 
-		want, err := time.Parse(fig.timeLayout, "2020-01-01T00:00:00Z")
+		want, err := time.Parse(confucius.timeLayout, "2020-01-01T00:00:00Z")
 		if err != nil {
 			t.Fatalf("error parsing time: %v", err)
 		}
@@ -1259,7 +1259,7 @@ func Test_fig_setValue(t *testing.T) {
 		var tme time.Time
 		fv := reflect.ValueOf(&tme).Elem()
 
-		err := fig.setValue(fv, "2020-Feb-01T00:00:00Z")
+		err := confucius.setValue(fv, "2020-Feb-01T00:00:00Z")
 		if err == nil {
 			t.Fatalf("expected err")
 		}
@@ -1269,7 +1269,7 @@ func Test_fig_setValue(t *testing.T) {
 		var i interface{}
 		fv := reflect.ValueOf(i)
 
-		err := fig.setValue(fv, "empty")
+		err := confucius.setValue(fv, "empty")
 		if err == nil {
 			t.Fatalf("expected err")
 		}
@@ -1279,15 +1279,15 @@ func Test_fig_setValue(t *testing.T) {
 		s := struct{ Name string }{}
 		fv := reflect.ValueOf(&s).Elem()
 
-		err := fig.setValue(fv, "foo")
+		err := confucius.setValue(fv, "foo")
 		if err == nil {
 			t.Fatalf("expected err")
 		}
 	})
 }
 
-func Test_fig_setSlice(t *testing.T) {
-	f := defaultFig()
+func Test_confucius_setSlice(t *testing.T) {
+	f := defaultConfucius()
 
 	for _, tc := range []struct {
 		Name      string
@@ -1374,9 +1374,9 @@ func setenv(t *testing.T, key, value string) {
 	}
 }
 
-// func Test_fig_validate(t *testing.T) {
-// 	fig := defaultFig()
-// 	fig.tag = "fig"
+// func Test_confucius_validate(t *testing.T) {
+// 	confucius := defaultConfucius()
+// 	confucius.tag = "conf"
 //
 // 	t.Run("struct without tags does nothing", func(t *testing.T) {
 // 		var cfg struct {
@@ -1387,7 +1387,7 @@ func setenv(t *testing.T, key, value string) {
 // 		cfg.A = "foo"
 // 		cfg.B = 9
 //
-// 		err := fig.validate(&cfg)
+// 		err := confucius.validate(&cfg)
 // 		if err != nil {
 // 			t.Fatalf("unexpected err: %v", err)
 // 		}
@@ -1403,10 +1403,10 @@ func setenv(t *testing.T, key, value string) {
 //
 // 	t.Run("non pointer struct returns error", func(t *testing.T) {
 // 		var cfg struct {
-// 			A string `fig:"a,default=foo"`
+// 			A string `conf:"a,default=foo"`
 // 		}
 //
-// 		err := fig.validate(cfg)
+// 		err := confucius.validate(cfg)
 // 		if err == nil {
 // 			t.Fatal("expected err")
 // 		}
@@ -1414,11 +1414,11 @@ func setenv(t *testing.T, key, value string) {
 //
 // 	t.Run("returns field errors as error", func(t *testing.T) {
 // 		var cfg struct {
-// 			A string  `fig:"a,required"`
-// 			D float32 `fig:"d,default=true"`
+// 			A string  `conf:"a,required"`
+// 			D float32 `conf:"d,default=true"`
 // 		}
 //
-// 		err := fig.validate(&cfg)
+// 		err := confucius.validate(&cfg)
 // 		if err == nil {
 // 			t.Fatal("expected err")
 // 		}
@@ -1434,22 +1434,22 @@ func setenv(t *testing.T, key, value string) {
 // 	})
 // }
 //
-// func Test_fig_validateStruct(t *testing.T) {
-// 	fig := defaultFig()
-// 	fig.tag = "fig"
+// func Test_confucius_validateStruct(t *testing.T) {
+// 	confucius := defaultConfucius()
+// 	confucius.tag = "conf"
 //
 // 	t.Run("struct nil ptr ptr validated", func(t *testing.T) {
 // 		type A struct {
-// 			B string  `fig:",required"`
-// 			X float32 `fig:",default=not-a-float"`
+// 			B string  `conf:",required"`
+// 			X float32 `conf:",default=not-a-float"`
 // 		}
 //
 // 		C := struct {
-// 			A ***A `fig:",required"`
+// 			A ***A `conf:",required"`
 // 		}{}
 //
 // 		errs := make(fieldErrors)
-// 		fig.validateStruct(reflect.ValueOf(&C).Elem(), errs, "")
+// 		confucius.validateStruct(reflect.ValueOf(&C).Elem(), errs, "")
 //
 // 		if len(errs) != 1 {
 // 			t.Fatalf("want len(errs) == 1, got %d\nerrs == %+v", len(errs), errs)
@@ -1462,8 +1462,8 @@ func setenv(t *testing.T, key, value string) {
 //
 // 	t.Run("struct non-nil ptr inner fields validated", func(t *testing.T) {
 // 		type A struct {
-// 			B string  `fig:",required"`
-// 			X float32 `fig:",default=not-a-float"`
+// 			B string  `conf:",required"`
+// 			X float32 `conf:",default=not-a-float"`
 // 		}
 //
 // 		C := struct {
@@ -1474,7 +1474,7 @@ func setenv(t *testing.T, key, value string) {
 // 		C.A = &a
 //
 // 		errs := make(fieldErrors)
-// 		fig.validateStruct(reflect.ValueOf(&C).Elem(), errs, "")
+// 		confucius.validateStruct(reflect.ValueOf(&C).Elem(), errs, "")
 //
 // 		if len(errs) != 2 {
 // 			t.Fatalf("want len(errs) == 2, got %d\nerrs == %+v", len(errs), errs)
@@ -1491,11 +1491,11 @@ func setenv(t *testing.T, key, value string) {
 //
 // 	t.Run("nested structs validated", func(t *testing.T) {
 // 		var test struct {
-// 			A string `fig:",required"`
+// 			A string `conf:",required"`
 // 			B struct {
-// 				C int `fig:",default=5"`
+// 				C int `conf:",default=5"`
 // 				D struct {
-// 					E *float32 `fig:",default=0.125"`
+// 					E *float32 `conf:",default=0.125"`
 // 				}
 // 			}
 // 		}
@@ -1508,7 +1508,7 @@ func setenv(t *testing.T, key, value string) {
 // 			name = "test"
 // 		)
 //
-// 		fig.validateStruct(fv, errs, name)
+// 		confucius.validateStruct(fv, errs, name)
 // 		if len(errs) > 0 {
 // 			t.Fatalf("unexpected err: %v", errs)
 // 		}
@@ -1522,26 +1522,26 @@ func setenv(t *testing.T, key, value string) {
 // 		}
 //
 // 		if *test.B.D.E != 0.125 {
-// 			t.Fatalf("test.B.D.E: want %fig, got %fig", 0.125, *test.B.D.E)
+// 			t.Fatalf("test.B.D.E: want %conf, got %conf", 0.125, *test.B.D.E)
 // 		}
 // 	})
 //
 // 	t.Run("slice field names set", func(t *testing.T) {
 // 		type A struct {
-// 			B string `fig:",required"`
+// 			B string `conf:",required"`
 // 		}
 //
 // 		type C struct {
-// 			As []A `fig:"required"`
+// 			As []A `conf:"required"`
 // 		}
 //
 // 		type I struct {
-// 			X int `fig:",required"`
+// 			X int `conf:",required"`
 // 		}
 //
 // 		D := struct {
 // 			*I
-// 			Cs []C `fig:"required"`
+// 			Cs []C `conf:"required"`
 // 		}{}
 //
 // 		D.I = &I{}
@@ -1552,7 +1552,7 @@ func setenv(t *testing.T, key, value string) {
 // 		}
 //
 // 		errs := make(fieldErrors)
-// 		fig.validateStruct(reflect.ValueOf(D), errs, "")
+// 		confucius.validateStruct(reflect.ValueOf(D), errs, "")
 //
 // 		if len(errs) == 0 {
 // 			t.Fatalf("expected err")
@@ -1572,14 +1572,14 @@ func setenv(t *testing.T, key, value string) {
 //
 // 	t.Run("returns all field errors", func(t *testing.T) {
 // 		var test struct {
-// 			A string `fig:",required"`
+// 			A string `conf:",required"`
 // 			B struct {
-// 				C int `fig:",badkey"`
+// 				C int `conf:",badkey"`
 // 				D *struct {
-// 					E *float32 `fig:",required"`
+// 					E *float32 `conf:",required"`
 // 				}
-// 				I interface{} `fig:",default=5"`
-// 				S string      `fig:",required"`
+// 				I interface{} `conf:",default=5"`
+// 				S string      `conf:",required"`
 // 			}
 // 		}
 //
@@ -1591,7 +1591,7 @@ func setenv(t *testing.T, key, value string) {
 // 			name = "test"
 // 		)
 //
-// 		fig.validateStruct(fv, errs, name)
+// 		confucius.validateStruct(fv, errs, name)
 // 		if len(errs) == 0 {
 // 			t.Fatal("expected err")
 // 		}
@@ -1610,15 +1610,15 @@ func setenv(t *testing.T, key, value string) {
 // 	})
 // }
 //
-// func Test_fig_validateField(t *testing.T) {
-// 	fig := defaultFig()
-// 	fig.tag = "fig"
+// func Test_confucius_validateField(t *testing.T) {
+// 	confucius := defaultConfucius()
+// 	confucius.tag = "conf"
 //
 // 	t.Run("nil struct does not validate inner fields", func(t *testing.T) {
 // 		A := struct {
 // 			B *struct {
-// 				C string `fig:"C,required"`
-// 				D bool   `fig:"D,required"`
+// 				C string `conf:"C,required"`
+// 				D bool   `conf:"D,required"`
 // 			}
 // 		}{}
 //
@@ -1626,7 +1626,7 @@ func setenv(t *testing.T, key, value string) {
 // 		fd := reflect.ValueOf(A).Type().Field(0)
 //
 // 		errs := make(fieldErrors)
-// 		fig.validateFieldTag(fv, fd, errs, "")
+// 		confucius.validateFieldTag(fv, fd, errs, "")
 //
 // 		if len(errs) > 0 {
 // 			t.Fatalf("unexpected err: %v", errs)
@@ -1639,8 +1639,8 @@ func setenv(t *testing.T, key, value string) {
 // 		}{}
 //
 // 		C := struct {
-// 			D string `fig:",required"`
-// 			E int    `fig:",default=5"`
+// 			D string `conf:",required"`
+// 			E int    `conf:",default=5"`
 // 		}{}
 //
 // 		A.I = &C
@@ -1649,7 +1649,7 @@ func setenv(t *testing.T, key, value string) {
 // 		fd := reflect.ValueOf(A).Type().Field(0)
 //
 // 		errs := make(fieldErrors)
-// 		fig.validateFieldTag(fv, fd, errs, "")
+// 		confucius.validateFieldTag(fv, fd, errs, "")
 //
 // 		if len(errs) != 1 {
 // 			t.Fatalf("want len(errs) == 1, got %d\nerrs = %+v", len(errs), errs)
@@ -1665,14 +1665,14 @@ func setenv(t *testing.T, key, value string) {
 // 	})
 // }
 //
-// func Test_fig_validateCollection(t *testing.T) {
-// 	fig := defaultFig()
-// 	fig.tag = "fig"
+// func Test_confucius_validateCollection(t *testing.T) {
+// 	confucius := defaultConfucius()
+// 	confucius.tag = "conf"
 //
 // 	t.Run("slice of struct ptrs", func(t *testing.T) {
 // 		type A struct {
-// 			B string `fig:",required"`
-// 			S []int  `fig:",required"`
+// 			B string `conf:",required"`
+// 			S []int  `conf:",required"`
 // 		}
 //
 // 		C := struct {
@@ -1684,7 +1684,7 @@ func setenv(t *testing.T, key, value string) {
 // 		}
 //
 // 		errs := make(fieldErrors)
-// 		fig.validateCollection(reflect.ValueOf(&C), errs, "")
+// 		confucius.validateCollection(reflect.ValueOf(&C), errs, "")
 //
 // 		if len(errs) == 0 {
 // 			t.Fatalf("expected error")
@@ -1703,8 +1703,8 @@ func setenv(t *testing.T, key, value string) {
 //
 // 	t.Run("anonymous struct", func(t *testing.T) {
 // 		type A struct {
-// 			B string `fig:",required"`
-// 			D int    `fig:",default=5"`
+// 			B string `conf:",required"`
+// 			D int    `conf:",default=5"`
 // 		}
 //
 // 		C := struct {
@@ -1712,7 +1712,7 @@ func setenv(t *testing.T, key, value string) {
 // 		}{}
 //
 // 		errs := make(fieldErrors)
-// 		fig.validateCollection(reflect.ValueOf(&C).Elem(), errs, "")
+// 		confucius.validateCollection(reflect.ValueOf(&C).Elem(), errs, "")
 //
 // 		if len(errs) != 1 {
 // 			t.Fatalf("want len(errs) == 1, got %d\nerrs = %+v", len(errs), errs)
@@ -1729,11 +1729,11 @@ func setenv(t *testing.T, key, value string) {
 //
 // 	t.Run("pointer to pointer to struct", func(t *testing.T) {
 // 		s := &struct {
-// 			A string `fig:",required"`
+// 			A string `conf:",required"`
 // 		}{}
 //
 // 		errs := make(fieldErrors)
-// 		fig.validateCollection(reflect.ValueOf(&s), errs, "")
+// 		confucius.validateCollection(reflect.ValueOf(&s), errs, "")
 //
 // 		if len(errs) == 0 {
 // 			t.Fatalf("expected error")
@@ -1750,14 +1750,14 @@ func setenv(t *testing.T, key, value string) {
 //
 // 	t.Run("slice of slices", func(t *testing.T) {
 // 		type A struct {
-// 			B string `fig:",required"`
+// 			B string `conf:",required"`
 // 		}
 //
 // 		s := make([][]A, 1)
 // 		s[0] = make([]A, 1)
 //
 // 		errs := make(fieldErrors)
-// 		fig.validateCollection(reflect.ValueOf(&s), errs, "")
+// 		confucius.validateCollection(reflect.ValueOf(&s), errs, "")
 //
 // 		if len(errs) == 0 {
 // 			t.Fatalf("expected error")
@@ -1777,7 +1777,7 @@ func setenv(t *testing.T, key, value string) {
 // 		var iter interface{} = x
 //
 // 		errs := make(fieldErrors)
-// 		fig.validateCollection(reflect.ValueOf(iter), errs, "")
+// 		confucius.validateCollection(reflect.ValueOf(iter), errs, "")
 //
 // 		if len(errs) > 0 {
 // 			t.Fatalf("unexpected err: %v", errs)
@@ -1785,8 +1785,8 @@ func setenv(t *testing.T, key, value string) {
 // 	})
 // }
 
-// func Test_fig_validateFieldWithTag(t *testing.T) {
-// 	f := defaultFig()
+// func Test_confucius_validateFieldWithTag(t *testing.T) {
+// 	f := defaultConfucius()
 //
 // 	t.Run("returns nil if tag does not contain validation keys", func(t *testing.T) {
 // 		var s []string
@@ -1828,8 +1828,8 @@ func setenv(t *testing.T, key, value string) {
 // 	})
 // }
 //
-// func Test_fig_validateFieldWithTag_required(t *testing.T) {
-// 	f := defaultFig()
+// func Test_confucius_validateFieldWithTag_required(t *testing.T) {
+// 	f := defaultConfucius()
 //
 // 	t.Run("returns error on zero value", func(t *testing.T) {
 // 		var s []string
@@ -1850,8 +1850,8 @@ func setenv(t *testing.T, key, value string) {
 // 	})
 // }
 //
-// func Test_fig_validateFieldWithTag_default(t *testing.T) {
-// 	f := defaultFig()
+// func Test_confucius_validateFieldWithTag_default(t *testing.T) {
+// 	f := defaultConfucius()
 //
 // 	t.Run("sets default with leading field name", func(t *testing.T) {
 // 		var s string
@@ -1906,7 +1906,7 @@ func setenv(t *testing.T, key, value string) {
 // 	})
 //
 // 	t.Run("sets default time with custom layout", func(t *testing.T) {
-// 		f := defaultFig()
+// 		f := defaultConfucius()
 // 		f.timeLayout = "01-2006"
 //
 // 		dt := time.Time{}

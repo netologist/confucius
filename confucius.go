@@ -1,4 +1,4 @@
-package fig
+package confucius
 
 import (
 	"encoding/json"
@@ -19,14 +19,14 @@ import (
 )
 
 const (
-	// DefaultFilename is the default filename of the config file that fig looks for.
+	// DefaultFilename is the default filename of the config file that confucius looks for.
 	DefaultFilename = "config.yaml"
-	// DefaultDir is the default directory that fig searches in for the config file.
+	// DefaultDir is the default directory that confucius searches in for the config file.
 	DefaultDir = "."
-	// DefaultTag is the default struct tag key that fig uses to find the field's alt
+	// DefaultTag is the default struct tag key that confucius uses to find the field's alt
 	// name.
-	DefaultTag = "fig"
-	// DefaultTimeLayout is the default time layout that fig uses to parse times.
+	DefaultTag = "conf"
+	// DefaultTimeLayout is the default time layout that confucius uses to parse times.
 	DefaultTimeLayout = time.RFC3339
 	// DefaultProfileLayout represents default profile file layout.
 	// You should use `config` for filename, `test` for profile, `yaml` for extension.
@@ -37,7 +37,7 @@ const (
 // Load reads a configuration file and loads it into the given struct. The
 // parameter `cfg` must be a pointer to a struct.
 //
-// By default fig looks for a file `config.yaml` in the current directory and
+// By default confucius looks for a file `config.yaml` in the current directory and
 // uses the struct field tag `fig` for matching field names and validation.
 // To alter this behaviour pass additional parameters as options.
 //
@@ -45,7 +45,7 @@ const (
 // If a required field is not set by the configuration file an error is returned.
 //
 //   type Config struct {
-//     Env string `fig:"env" validate:"required"` // or just `validate:"required"`
+//     Env string `conf:"env" validate:"required"` // or just `validate:"required"`
 //   }
 //
 // A field can be configured with a default value by adding a `default` key in the
@@ -53,22 +53,22 @@ const (
 // If a field is not set by the configuration file then the default value is set.
 //
 //  type Config struct {
-//    Level string `fig:"level" default:"info"` // or just `default:"info"`
+//    Level string `conf:"level" default:"info"` // or just `default:"info"`
 //  }
 //
 // A single field may not be marked as both `required` and `default`.
 func Load(cfg interface{}, options ...Option) error {
-	fig := defaultFig()
+	confucius := defaultConfucius()
 
 	for _, opt := range options {
-		opt(fig)
+		opt(confucius)
 	}
 
-	return fig.Load(cfg)
+	return confucius.Load(cfg)
 }
 
-func defaultFig() *fig {
-	return &fig{
+func defaultConfucius() *confucius {
+	return &confucius{
 		filename:      DefaultFilename,
 		dirs:          []string{DefaultDir},
 		tag:           DefaultTag,
@@ -77,7 +77,7 @@ func defaultFig() *fig {
 	}
 }
 
-type fig struct {
+type confucius struct {
 	useEnv        bool
 	useReader     bool
 	dirs          []string
@@ -91,25 +91,25 @@ type fig struct {
 	readerDecoder Decoder
 }
 
-func (f *fig) Load(cfg interface{}) (err error) {
+func (c *confucius) Load(cfg interface{}) (err error) {
 	if !isStructPtr(cfg) {
 		return fmt.Errorf("cfg must be a pointer to a struct")
 	}
 
 	readerVals := make(map[string]interface{})
 
-	file, err := f.findCfgFile()
-	if !f.useReader && err != nil {
+	file, err := c.findCfgFile()
+	if !c.useReader && err != nil {
 		return err
 	}
 
-	vals, err := f.decodeFile(file)
-	if !f.useReader && err != nil {
+	vals, err := c.decodeFile(file)
+	if !c.useReader && err != nil {
 		return err
 	}
 
-	if f.useReader {
-		readerVals, err = f.decodeReader(f.readerConfig, f.readerDecoder)
+	if c.useReader {
+		readerVals, err = c.decodeReader(c.readerConfig, c.readerDecoder)
 		if err != nil {
 			return err
 		}
@@ -119,13 +119,13 @@ func (f *fig) Load(cfg interface{}) (err error) {
 		vals = readerVals
 	}
 
-	for _, profile := range f.profiles {
-		profileFile, err := f.findProfileCfgFile(profile)
+	for _, profile := range c.profiles {
+		profileFile, err := c.findProfileCfgFile(profile)
 		if err != nil {
 			return err
 		}
 
-		profileVals, err := f.decodeFile(profileFile)
+		profileVals, err := c.decodeFile(profileFile)
 		if err != nil {
 			return fmt.Errorf("%v, filename: %s", err, profileFile)
 		}
@@ -135,25 +135,25 @@ func (f *fig) Load(cfg interface{}) (err error) {
 		}
 	}
 
-	if err := f.decodeMap(vals, cfg); err != nil {
+	if err := c.decodeMap(vals, cfg); err != nil {
 		return err
 	}
 
-	return f.processCfg(cfg)
+	return c.processCfg(cfg)
 }
 
-func (f *fig) profileFileName(profile string) string {
-	filename := f.profileLayout
-	parts := strings.Split(f.filename, ".")
+func (c *confucius) profileFileName(profile string) string {
+	filename := c.profileLayout
+	parts := strings.Split(c.filename, ".")
 	filename = strings.ReplaceAll(filename, "config", parts[0])
 	filename = strings.ReplaceAll(filename, "test", profile)
 	filename = strings.ReplaceAll(filename, "yaml", parts[1])
 	return filename
 }
 
-func (f *fig) findProfileCfgFile(profile string) (path string, err error) {
-	file := f.profileFileName(profile)
-	for _, dir := range f.dirs {
+func (c *confucius) findProfileCfgFile(profile string) (path string, err error) {
+	file := c.profileFileName(profile)
+	for _, dir := range c.dirs {
 		path = filepath.Join(dir, file)
 		if fileExists(path) {
 			return
@@ -162,28 +162,28 @@ func (f *fig) findProfileCfgFile(profile string) (path string, err error) {
 	return "", fmt.Errorf("%s: %w", file, ErrFileNotFound)
 }
 
-func (f *fig) findCfgFile() (path string, err error) {
-	for _, dir := range f.dirs {
-		path = filepath.Join(dir, f.filename)
+func (c *confucius) findCfgFile() (path string, err error) {
+	for _, dir := range c.dirs {
+		path = filepath.Join(dir, c.filename)
 		if fileExists(path) {
 			return
 		}
 	}
-	return "", fmt.Errorf("%s: %w", f.filename, ErrFileNotFound)
+	return "", fmt.Errorf("%s: %w", c.filename, ErrFileNotFound)
 }
 
 // decodeFile reads the file and unmarshalls it using a decoder based on the file extension.
-func (f *fig) decodeFile(file string) (map[string]interface{}, error) {
+func (c *confucius) decodeFile(file string) (map[string]interface{}, error) {
 	fd, err := os.Open(file)
 	if err != nil {
 		return nil, err
 	}
 	defer fd.Close()
 
-	return f.decodeReader(fd, Decoder(filepath.Ext(file)))
+	return c.decodeReader(fd, Decoder(filepath.Ext(file)))
 }
 
-func (f *fig) decodeReader(reader io.Reader, decoder Decoder) (map[string]interface{}, error) {
+func (c *confucius) decodeReader(reader io.Reader, decoder Decoder) (map[string]interface{}, error) {
 	vals := make(map[string]interface{})
 
 	switch decoder {
@@ -204,22 +204,22 @@ func (f *fig) decodeReader(reader io.Reader, decoder Decoder) (map[string]interf
 			vals[field] = val
 		}
 	default:
-		return nil, fmt.Errorf("unsupported file extension %s", filepath.Ext(f.filename))
+		return nil, fmt.Errorf("unsupported file extension %s", filepath.Ext(c.filename))
 	}
 
 	return vals, nil
 }
 
 // decodeMap decodes a map of values into result using the mapstructure library.
-func (f *fig) decodeMap(m map[string]interface{}, result interface{}) error {
+func (c *confucius) decodeMap(m map[string]interface{}, result interface{}) error {
 	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		WeaklyTypedInput: true,
 		Result:           result,
-		TagName:          f.tag,
+		TagName:          c.tag,
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
 			fromEnvironmentHookFunc(),
 			mapstructure.StringToTimeDurationHookFunc(),
-			mapstructure.StringToTimeHookFunc(f.timeLayout),
+			mapstructure.StringToTimeHookFunc(c.timeLayout),
 		),
 	})
 	if err != nil {
@@ -268,12 +268,12 @@ func fromEnvironmentHookFunc() mapstructure.DecodeHookFunc {
 // processCfg processes a cfg struct after it has been loaded from
 // the config file, by validating required fields and setting defaults
 // where applicable.
-func (f *fig) processCfg(cfg interface{}) error {
-	fields := flattenCfg(cfg, f.tag)
+func (c *confucius) processCfg(cfg interface{}) error {
+	fields := flattenCfg(cfg, c.tag)
 	errs := make(fieldErrors)
 
 	for _, field := range fields {
-		if err := f.processField(field); err != nil {
+		if err := c.processField(field); err != nil {
 			errs[field.path()] = err
 		}
 	}
@@ -287,13 +287,13 @@ func (f *fig) processCfg(cfg interface{}) error {
 
 // processField processes a single field and is called by processCfg
 // for each field in cfg.
-func (f *fig) processField(field *field) error {
+func (c *confucius) processField(field *field) error {
 	if field.required && field.setDefault {
 		return fmt.Errorf("field cannot have both a required validation and a default value")
 	}
 
-	if f.useEnv {
-		if err := f.setFromEnv(field.v, field.path()); err != nil {
+	if c.useEnv {
+		if err := c.setFromEnv(field.v, field.path()); err != nil {
 			return fmt.Errorf("unable to set from env: %v", err)
 		}
 	}
@@ -303,7 +303,7 @@ func (f *fig) processField(field *field) error {
 	}
 
 	if field.setDefault && isZero(field.v) {
-		if err := f.setDefaultValue(field.v, field.defaultVal); err != nil {
+		if err := c.setDefaultValue(field.v, field.defaultVal); err != nil {
 			return fmt.Errorf("unable to set default: %v", err)
 		}
 	}
@@ -311,45 +311,45 @@ func (f *fig) processField(field *field) error {
 	return nil
 }
 
-func (f *fig) setFromEnv(fv reflect.Value, key string) error {
-	key = f.formatEnvKey(key)
+func (c *confucius) setFromEnv(fv reflect.Value, key string) error {
+	key = c.formatEnvKey(key)
 	if val, ok := os.LookupEnv(key); ok {
-		return f.setValue(fv, val)
+		return c.setValue(fv, val)
 	}
 	return nil
 }
 
-func (f *fig) formatEnvKey(key string) string {
+func (c *confucius) formatEnvKey(key string) string {
 	// loggers[0].level --> loggers_0_level
 	key = strings.NewReplacer(".", "_", "[", "_", "]", "").Replace(key)
-	if f.envPrefix != "" {
-		key = fmt.Sprintf("%s_%s", f.envPrefix, key)
+	if c.envPrefix != "" {
+		key = fmt.Sprintf("%s_%s", c.envPrefix, key)
 	}
 	return strings.ToUpper(key)
 }
 
 // setDefaultValue calls setValue but disallows booleans from
 // being set.
-func (f *fig) setDefaultValue(fv reflect.Value, val string) error {
+func (c *confucius) setDefaultValue(fv reflect.Value, val string) error {
 	if fv.Kind() == reflect.Bool {
 		return fmt.Errorf("unsupported type: %v", fv.Kind())
 	}
-	return f.setValue(fv, val)
+	return c.setValue(fv, val)
 }
 
 // setValue sets fv to val. it attempts to convert val to the correct
 // type based on the field's kind. if conversion fails an error is
 // returned.
 // fv must be settable else this panics.
-func (f *fig) setValue(fv reflect.Value, val string) error {
+func (c *confucius) setValue(fv reflect.Value, val string) error {
 	switch fv.Kind() {
 	case reflect.Ptr:
 		if fv.IsNil() {
 			fv.Set(reflect.New(fv.Type().Elem()))
 		}
-		return f.setValue(fv.Elem(), val)
+		return c.setValue(fv.Elem(), val)
 	case reflect.Slice:
-		if err := f.setSlice(fv, val); err != nil {
+		if err := c.setSlice(fv, val); err != nil {
 			return err
 		}
 	case reflect.Bool:
@@ -388,7 +388,7 @@ func (f *fig) setValue(fv reflect.Value, val string) error {
 		fv.SetString(val)
 	case reflect.Struct: // struct is only allowed a default in the special case where it's a time.Time
 		if _, ok := fv.Interface().(time.Time); ok {
-			t, err := time.Parse(f.timeLayout, val)
+			t, err := time.Parse(c.timeLayout, val)
 			if err != nil {
 				return err
 			}
@@ -406,11 +406,11 @@ func (f *fig) setValue(fv reflect.Value, val string) error {
 // (e.g. "[1,2]") and sv must be a slice value. if conversion of val
 // to a slice fails then an error is returned.
 // sv must be settable else this panics.
-func (f *fig) setSlice(sv reflect.Value, val string) error {
+func (c *confucius) setSlice(sv reflect.Value, val string) error {
 	ss := stringSlice(val)
 	slice := reflect.MakeSlice(sv.Type(), len(ss), cap(ss))
 	for i, s := range ss {
-		if err := f.setValue(slice.Index(i), s); err != nil {
+		if err := c.setValue(slice.Index(i), s); err != nil {
 			return err
 		}
 	}

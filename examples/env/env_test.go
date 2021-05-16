@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kkyr/fig"
+	"github.com/hasanozgan/confucius"
 )
 
 type Config struct {
 	Database struct {
 		Host     string `validate:"required"`
 		Port     int    `validate:"required"`
-		Database string `validate:"required" fig:"db"`
+		Database string `validate:"required" conf:"db"`
 		Username string `validate:"required"`
 		Password string `validate:"required"`
 	}
@@ -28,7 +28,7 @@ func ExampleLoad() {
 	check(os.Setenv("APP_CONTAINER_ARGS", "[-p,5050:5050]"))
 
 	var cfg Config
-	err := fig.Load(&cfg, fig.UseEnv("app"))
+	err := confucius.Load(&cfg, confucius.UseEnv("app"))
 	check(err)
 
 	fmt.Println(cfg.Database.Host)

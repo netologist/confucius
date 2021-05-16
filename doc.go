@@ -1,9 +1,9 @@
 /*
-Package fig loads configuration files into Go structs with extra juice for validating fields and setting defaults.
+package confucius loads configuration files into Go structs with extra juice for validating fields and setting defaults.
 
 Config files may be defined in in yaml, json or toml format.
 
-When you call `Load()`, fig takes the following steps:
+When you call `Load()`, confucius takes the following steps:
 
   1. Finds config file
   2. Loads file into config struct
@@ -35,32 +35,32 @@ Define your struct and load it:
  import (
    "fmt"
 
-   "github.com/kkyr/fig"
+   "github.com/hasanozgan/confucius"
  )
 
 
   type Config struct {
-    Build  time.Time `fig:"build" validate:"required"`
+    Build  time.Time `conf:"build" validate:"required"`
     Server struct {
-      Host    string        `fig:"host" default:"127.0.0.1"`
-      Ports   []int         `fig:"ports" default:"[80,443]"`
-      Cleanup time.Duration `fig:"cleanup" default:"30m"`
+      Host    string        `conf:"host" default:"127.0.0.1"`
+      Ports   []int         `conf:"ports" default:"[80,443]"`
+      Cleanup time.Duration `conf:"cleanup" default:"30m"`
     }
     Logger struct {
-      Level string `fig:"level" default:"info"`
-      Trace bool   `fig:"trace"`
+      Level string `conf:"level" default:"info"`
+      Trace bool   `conf:"trace"`
     }
   }
 
  func main() {
    var cfg Config
-   _ = fig.Load(&cfg)
+   _ = confucius.Load(&cfg)
 
    fmt.Printf("%+v\n", cfg)
    // Output: {Build:2019-12-25 00:00:00 +0000 UTC Server:{Host:127.0.0.1 Ports:[8080] Cleanup:1h0m0s} Logger:{Level:warn Trace:true}}
  }
 
-By default fig searches for a file named `config.yaml` in the directory it is run from.
+By default confucius searches for a file named `config.yaml` in the directory it is run from.
 It can be configured to look elsewhere.
 
 Configuration
@@ -69,11 +69,11 @@ Pass options as additional parameters to `Load()` to configure fig's behaviour.
 
 File
 
-Change the file and directories fig searches in with `File()`.
+Change the file and directories confucius searches in with `File()`.
 
-  fig.Load(&cfg,
-    fig.File("settings.json"),
-    fig.Dirs(".", "home/user/myapp", "/opt/myapp"),
+  confucius.Load(&cfg,
+    confucius.File("settings.json"),
+    confucius.Dirs(".", "home/user/myapp", "/opt/myapp"),
   )
 
 Fig searches for the file in dirs sequentially and uses the first matching file.
@@ -82,7 +82,7 @@ The decoder (yaml/json/toml) used is picked based on the file's extension.
 
 Tag
 
-The struct tag key tag fig looks for to find the field's alt name can be changed using `Tag()`.
+The struct tag key tag confucius looks for to find the field's alt name can be changed using `Tag()`.
 
   type Config struct {
     Host  string `yaml:"host" validate:"required"`
@@ -90,9 +90,9 @@ The struct tag key tag fig looks for to find the field's alt name can be changed
   }
 
   var cfg Config
-  fig.Load(&cfg, fig.Tag("yaml"))
+  confucius.Load(&cfg, confucius.Tag("yaml"))
 
-By default fig uses the tag key `fig`.
+By default confucius uses the tag key `fig`.
 
 Environment
 
@@ -110,13 +110,13 @@ If a field has an alt name defined in its struct tag then that name is preferred
 
   type Config struct {
     Build    time.Time
-    LogLevel string `fig:"log_level"`
+    LogLevel string `conf:"log_level"`
     Server   struct {
       Host string
     }
   }
 
-With the struct above and `UseEnv("myapp")` fig would search for the following
+With the struct above and `UseEnv("myapp")` confucius would search for the following
 environment variables:
 
   MYAPP_BUILD
@@ -141,26 +141,26 @@ Note: the Server slice must already have members inside it (i.e. from loading of
 
 Time
 
-Change the layout fig uses to parse times using `TimeLayout()`.
+Change the layout confucius uses to parse times using `TimeLayout()`.
 
   type Config struct {
-    Date time.Time `fig:"date" default:"12-25-2019"`
+    Date time.Time `conf:"date" default:"12-25-2019"`
   }
 
   var cfg Config
-  fig.Load(&cfg, fig.TimeLayout("01-02-2006"))
+  confucius.Load(&cfg, confucius.TimeLayout("01-02-2006"))
 
   fmt.Printf("%+v", cfg)
   // Output: {Date:2019-12-25 00:00:00 +0000 UTC}
 
-By default fig parses time using the `RFC.3339` layout (`2006-01-02T15:04:05Z07:00`).
+By default confucius parses time using the `RFC.3339` layout (`2006-01-02T15:04:05Z07:00`).
 
 Required
 
-A validate key with a required value in the field's struct tag makes fig check if the field has been set after it's been loaded. Required fields that are not set are returned as an error.
+A validate key with a required value in the field's struct tag makes confucius check if the field has been set after it's been loaded. Required fields that are not set are returned as an error.
 
   type Config struct {
-    Host string `fig:"host" validate:"required"` // or simply `validate:"required"`
+    Host string `conf:"host" validate:"required"` // or simply `validate:"required"`
   }
 
 Fig uses the following properties to check if a field is set:
@@ -204,18 +204,18 @@ See example below to help understand:
   m := time.Time{}
   cfg.M = &m
 
-  err := fig.Load(&cfg)
+  err := confucius.Load(&cfg)
   fmt.Print(err)
   // A: required, B: required, C: required, D: required, E: required, G: required, H.J: required, K: required, M: required
 
 Default
 
-A default key in the field tag makes fig fill the field with the value specified when the field is not otherwise set.
+A default key in the field tag makes confucius fill the field with the value specified when the field is not otherwise set.
 
 Fig attempts to parse the value based on the field's type. If parsing fails then an error is returned.
 
   type Config struct {
-    Port int `fig:"port" default:"8000"` // or simply `default:"8000"`
+    Port int `conf:"port" default:"8000"` // or simply `default:"8000"`
   }
 
 
@@ -246,12 +246,12 @@ This is not allowed:
 
 Errors
 
-A wrapped error `ErrFileNotFound` is returned when fig is not able to find a config file to load. This can be useful for instance to fallback to a different configuration loading mechanism.
+A wrapped error `ErrFileNotFound` is returned when confucius is not able to find a config file to load. This can be useful for instance to fallback to a different configuration loading mechanism.
 
   var cfg Config
-  err := fig.Load(&cfg)
-  if errors.Is(err, fig.ErrFileNotFound) {
+  err := confucius.Load(&cfg)
+  if errors.Is(err, confucius.ErrFileNotFound) {
     // load config from elsewhere
   }
 */
-package fig
+package confucius

@@ -4,25 +4,25 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kkyr/fig"
+	"github.com/hasanozgan/confucius"
 )
 
 type Config struct {
 	Database struct {
-		Host     string `fig:"host" validate:"required"`
-		Port     int    `fig:"port"`
-		Name     string `fig:"name" validate:"required"`
-		Username string `fig:"username"`
-		Password string `fig:"password"`
+		Host     string `conf:"host" validate:"required"`
+		Port     int    `conf:"port"`
+		Name     string `conf:"name" validate:"required"`
+		Username string `conf:"username"`
+		Password string `conf:"password"`
 	}
 	Kafka struct {
-		Host []string `fig:"host" validate:"required"`
+		Host []string `conf:"host" validate:"required"`
 	}
 }
 
 func ExampleLoad() {
 	var cfg Config
-	if err := fig.Load(&cfg); err == nil {
+	if err := confucius.Load(&cfg); err == nil {
 		fmt.Printf("%+v", cfg)
 	}
 
@@ -34,7 +34,7 @@ func ExampleLoad_with_environment_in_config_file() {
 	os.Setenv("DATABASE_NAME", "users-readonly")
 
 	var cfg Config
-	if err := fig.Load(&cfg); err == nil {
+	if err := confucius.Load(&cfg); err == nil {
 		fmt.Printf("%+v", cfg)
 	}
 
@@ -44,7 +44,7 @@ func ExampleLoad_with_environment_in_config_file() {
 
 func ExampleLoad_with_multi_profile() {
 	var cfg Config
-	if err := fig.Load(&cfg, fig.Profiles("test", "integration"), fig.ProfileLayout("config-test.yaml")); err == nil {
+	if err := confucius.Load(&cfg, confucius.Profiles("test", "integration"), confucius.ProfileLayout("config-test.yaml")); err == nil {
 		fmt.Printf("%+v", cfg)
 	}
 
@@ -54,7 +54,7 @@ func ExampleLoad_with_multi_profile() {
 
 func ExampleLoad_with_single_profile() {
 	var cfg Config
-	if err := fig.Load(&cfg, fig.Profiles("test"), fig.ProfileLayout("config-test.yaml")); err == nil {
+	if err := confucius.Load(&cfg, confucius.Profiles("test"), confucius.ProfileLayout("config-test.yaml")); err == nil {
 		fmt.Printf("%+v", cfg)
 	}
 

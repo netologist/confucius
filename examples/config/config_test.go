@@ -4,32 +4,32 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kkyr/fig"
+	"github.com/hasanozgan/confucius"
 )
 
 type Config struct {
 	App struct {
-		Environment string `fig:"environment" validate:"required"`
-	} `fig:"app"`
+		Environment string `conf:"environment" validate:"required"`
+	} `conf:"app"`
 	Server struct {
-		Host         string        `fig:"host" default:"0.0.0.0"`
-		Port         int           `fig:"port" default:"80"`
-		ReadTimeout  time.Duration `fig:"read_timeout" default:"30s"`
-		WriteTimeout time.Duration `fig:"write_timeout" default:"30s"`
-	} `fig:"server"`
+		Host         string        `conf:"host" default:"0.0.0.0"`
+		Port         int           `conf:"port" default:"80"`
+		ReadTimeout  time.Duration `conf:"read_timeout" default:"30s"`
+		WriteTimeout time.Duration `conf:"write_timeout" default:"30s"`
+	} `conf:"server"`
 	Logger struct {
-		Level string `fig:"level" default:"info"`
-	} `fig:"logger"`
+		Level string `conf:"level" default:"info"`
+	} `conf:"logger"`
 	Certificate struct {
-		Version    int       `fig:"version"`
-		DNSNames   []string  `fig:"dns_names" default:"[kkyr,kkyr.io]"`
-		Expiration time.Time `fig:"expiration" validate:"required"`
-	} `fig:"certificate"`
+		Version    int       `conf:"version"`
+		DNSNames   []string  `conf:"dns_names" default:"[kkyr,kkyr.io]"`
+		Expiration time.Time `conf:"expiration" validate:"required"`
+	} `conf:"certificate"`
 }
 
 func ExampleLoad() {
 	var cfg Config
-	err := fig.Load(&cfg, fig.TimeLayout("2006-01-02"))
+	err := confucius.Load(&cfg, confucius.TimeLayout("2006-01-02"))
 	if err != nil {
 		panic(err)
 	}

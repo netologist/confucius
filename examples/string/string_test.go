@@ -4,19 +4,19 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/kkyr/fig"
+	"github.com/hasanozgan/confucius"
 )
 
 type Config struct {
 	Database struct {
-		Host     string `fig:"host" validate:"required"`
-		Port     int    `fig:"port"`
-		Name     string `fig:"name" validate:"required"`
-		Username string `fig:"username"`
-		Password string `fig:"password"`
+		Host     string `conf:"host" validate:"required"`
+		Port     int    `conf:"port"`
+		Name     string `conf:"name" validate:"required"`
+		Username string `conf:"username"`
+		Password string `conf:"password"`
 	}
 	Kafka struct {
-		Host []string `fig:"host" validate:"required"`
+		Host []string `conf:"host" validate:"required"`
 	}
 }
 
@@ -26,7 +26,7 @@ var config string
 func ExampleLoad() {
 
 	var cfg Config
-	if err := fig.Load(&cfg, fig.String(config, fig.DecoderYaml)); err == nil {
+	if err := confucius.Load(&cfg, confucius.String(config, confucius.DecoderYaml)); err == nil {
 		fmt.Printf("%+v", cfg)
 	} else {
 		fmt.Print(err)

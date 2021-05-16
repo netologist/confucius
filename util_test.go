@@ -1,4 +1,4 @@
-package fig
+package confucius
 
 import (
 	"path/filepath"
@@ -51,7 +51,7 @@ func Test_fileExists(t *testing.T) {
 		t.Errorf("fileExists(bad) == true, expected false")
 	}
 
-	good := "fig.go"
+	good := "confucius.go"
 	ok = fileExists(good)
 	if !ok {
 		t.Errorf("fileExists(good) == false, expected true")

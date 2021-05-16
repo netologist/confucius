@@ -1,4 +1,4 @@
-package fig
+package confucius
 
 import (
 	"reflect"
@@ -7,7 +7,7 @@ import (
 
 func Test_flattenCfg(t *testing.T) {
 	type J struct {
-		K bool `fig:"k"`
+		K bool `conf:"k"`
 	}
 	cfg := struct {
 		A string
@@ -18,7 +18,7 @@ func Test_flattenCfg(t *testing.T) {
 		}
 		E *struct {
 			F []string
-		} `fig:"e"`
+		} `conf:"e"`
 		G *struct {
 			H int
 		}
@@ -28,7 +28,7 @@ func Test_flattenCfg(t *testing.T) {
 	cfg.B.C = []struct{ D *int }{{}, {}}
 	cfg.E = &struct{ F []string }{}
 
-	fields := flattenCfg(&cfg, "fig")
+	fields := flattenCfg(&cfg, "conf")
 	if len(fields) != 10 {
 		t.Fatalf("len(fields) == %d, expected %d", len(fields), 10)
 	}
@@ -46,7 +46,7 @@ func Test_flattenCfg(t *testing.T) {
 
 func Test_newStructField(t *testing.T) {
 	cfg := struct {
-		A int `fig:"a" default:"5" validate:"required"`
+		A int `conf:"a" default:"5" validate:"required"`
 	}{}
 	parent := &field{
 		v:        reflect.ValueOf(&cfg).Elem(),
@@ -54,7 +54,7 @@ func Test_newStructField(t *testing.T) {
 		sliceIdx: -1,
 	}
 
-	f := newStructField(parent, 0, "fig")
+	f := newStructField(parent, 0, "conf")
 	if f.parent != parent {
 		t.Errorf("f.parent == %p, expected %p", f.parent, f)
 	}
@@ -85,7 +85,7 @@ func Test_newSliceField(t *testing.T) {
 	cfg := struct {
 		A []struct {
 			B int
-		} `fig:"aaa"`
+		} `conf:"aaa"`
 	}{}
 	cfg.A = []struct {
 		B int
@@ -98,7 +98,7 @@ func Test_newSliceField(t *testing.T) {
 		sliceIdx: -1,
 	}
 
-	f := newSliceField(parent, 0, "fig")
+	f := newSliceField(parent, 0, "conf")
 	if f.parent != parent {
 		t.Errorf("f.parent == %p, expected %p", f.parent, f)
 	}
@@ -132,32 +132,32 @@ func Test_parseTag(t *testing.T) {
 			want:   structTag{},
 		},
 		{
-			tagVal: `fig:"a"`,
+			tagVal: `conf:"a"`,
 			want:   structTag{altName: "a"},
 		},
 		{
-			tagVal: `fig:"a,"`,
+			tagVal: `conf:"a,"`,
 			want:   structTag{altName: "a"},
 		},
 		{
-			tagVal: `fig:"a" default:"go"`,
+			tagVal: `conf:"a" default:"go"`,
 			want:   structTag{altName: "a", setDefault: true, defaultVal: "go"},
 		},
 		{
-			tagVal: `fig:"b" validate:"required"`,
+			tagVal: `conf:"b" validate:"required"`,
 			want:   structTag{altName: "b", required: true},
 		},
 		{
-			tagVal: `fig:"b" validate:"required" default:"go"`,
+			tagVal: `conf:"b" validate:"required" default:"go"`,
 			want:   structTag{altName: "b", required: true, setDefault: true, defaultVal: "go"},
 		},
 		{
-			tagVal: `fig:"c,omitempty"`,
+			tagVal: `conf:"c,omitempty"`,
 			want:   structTag{altName: "c"},
 		},
 	} {
 		t.Run(tc.tagVal, func(t *testing.T) {
-			tag := parseTag(reflect.StructTag(tc.tagVal), "fig")
+			tag := parseTag(reflect.StructTag(tc.tagVal), "conf")
 			if !reflect.DeepEqual(tc.want, tag) {
 				t.Fatalf("parseTag() == %+v, expected %+v", tag, tc.want)
 			}

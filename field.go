@@ -1,4 +1,4 @@
-package fig
+package confucius
 
 import (
 	"fmt"

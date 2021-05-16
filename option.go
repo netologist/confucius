@@ -1,12 +1,12 @@
-package fig
+package confucius
 
 import (
 	"io"
 	"strings"
 )
 
-// Option configures how fig loads the configuration.
-type Option func(f *fig)
+// Option configures how confucius loads the configuration.
+type Option func(c *confucius)
 
 // File returns an option that configures the filename that fig
 // looks for to provide the config values.
@@ -14,21 +14,21 @@ type Option func(f *fig)
 // The name must include the extension of the file. Supported
 // file types are `yaml`, `yml`, `json` and `toml`.
 //
-//   fig.Load(&cfg, fig.File("config.toml"))
+//   confucius.Load(&cfg, confucius.File("config.toml"))
 //
-// If this option is not used then fig looks for a file with name `config.yaml`.
+// If this option is not used then confucius looks for a file with name `config.yaml`.
 func File(name string) Option {
-	return func(f *fig) {
-		f.filename = name
+	return func(c *confucius) {
+		c.filename = name
 	}
 }
 
 // Reader returns an option that configure from reader for reference configuration.
 func Reader(reader io.Reader, decoder Decoder) Option {
-	return func(f *fig) {
-		f.useReader = true
-		f.readerConfig = reader
-		f.readerDecoder = decoder
+	return func(c *confucius) {
+		c.useReader = true
+		c.readerConfig = reader
+		c.readerDecoder = decoder
 	}
 }
 
@@ -37,51 +37,51 @@ func String(file string, decoder Decoder) Option {
 	return Reader(strings.NewReader(strings.TrimSpace(file)), decoder)
 }
 
-// Dirs returns an option that configures the directories that fig searches
+// Dirs returns an option that configures the directories that confucius searches
 // to find the configuration file.
 //
 // Directories are searched sequentially and the first one with a matching config file is used.
 //
 // This is useful when you don't know where exactly your configuration will be during run-time:
 //
-//   fig.Load(&cfg, fig.Dirs(".", "/etc/myapp", "/home/user/myapp"))
+//   confucius.Load(&cfg, confucius.Dirs(".", "/etc/myapp", "/home/user/myapp"))
 //
 //
-// If this option is not used then fig looks in the directory it is run from.
+// If this option is not used then confucius looks in the directory it is run from.
 func Dirs(dirs ...string) Option {
-	return func(f *fig) {
-		f.dirs = dirs
+	return func(c *confucius) {
+		c.dirs = dirs
 	}
 }
 
-// Tag returns an option that configures the tag key that fig uses
+// Tag returns an option that configures the tag key that confucius uses
 // when for the alt name struct tag key in fields.
 //
-//  fig.Load(&cfg, fig.Tag("config"))
+//  confucius.Load(&cfg, confucius.Tag("config"))
 //
-// If this option is not used then fig uses the tag `fig`.
+// If this option is not used then confucius uses the tag `fig`.
 func Tag(tag string) Option {
-	return func(f *fig) {
-		f.tag = tag
+	return func(c *confucius) {
+		c.tag = tag
 	}
 }
 
-// TimeLayout returns an option that conmfigures the time layout that fig uses when
+// TimeLayout returns an option that conmfigures the time layout that confucius uses when
 // parsing a time in a config file or in the default tag for time.Time fields.
 //
-//   fig.Load(&cfg, fig.TimeLayout("2006-01-02"))
+//   confucius.Load(&cfg, confucius.TimeLayout("2006-01-02"))
 //
-// If this option is not used then fig parses times using `time.RFC3339` layout.
+// If this option is not used then confucius parses times using `time.RFC3339` layout.
 func TimeLayout(layout string) Option {
-	return func(f *fig) {
-		f.timeLayout = layout
+	return func(c *confucius) {
+		c.timeLayout = layout
 	}
 }
 
-// UseEnv returns an option that configures fig to additionally load values
+// UseEnv returns an option that configures confucius to additionally load values
 // from the environment, after it has loaded values from a config file.
 //
-//   fig.Load(&cfg, fig.UseEnv("my_app"))
+//   confucius.Load(&cfg, confucius.UseEnv("my_app"))
 //
 // This is meant to be used in conjunction with loading from a file. There
 // is no support to ONLY load from the environment.
@@ -95,43 +95,43 @@ func TimeLayout(layout string) Option {
 //
 //   type Config struct {
 //     Build    time.Time
-//     LogLevel string `fig:"log_level"`
+//     LogLevel string `conf:"log_level"`
 //     Server   struct {
 //       Host string
 //     }
 //   }
 //
-// With the struct above and UseEnv("myapp") fig would search for the following
+// With the struct above and UseEnv("myapp") confucius would search for the following
 // environment variables:
 //
 //   MYAPP_BUILD
 //   MYAPP_LOG_LEVEL
 //   MYAPP_SERVER_HOST
 func UseEnv(prefix string) Option {
-	return func(f *fig) {
-		f.useEnv = true
-		f.envPrefix = prefix
+	return func(c *confucius) {
+		c.useEnv = true
+		c.envPrefix = prefix
 	}
 }
 
-// Profiles returns an option that configures the profile key that fig uses
+// Profiles returns an option that configures the profile key that confucius uses
 //
-//  fig.Load(&cfg, fig.UseProfile("test"))
+//  confucius.Load(&cfg, confucius.UseProfile("test"))
 //
-// If this option is not used then fig uses the tag `fig`.
+// If this option is not used then confucius uses the tag `fig`.
 func Profiles(profiles ...string) Option {
-	return func(f *fig) {
-		f.profiles = profiles
+	return func(c *confucius) {
+		c.profiles = profiles
 	}
 }
 
-// ProfileLayout returns an option that configures the profile layout that fig uses
+// ProfileLayout returns an option that configures the profile layout that confucius uses
 //
-//  fig.Load(&cfg, fig.UseProfileLayout("config-test.yaml"))
+//  confucius.Load(&cfg, confucius.UseProfileLayout("config-test.yaml"))
 //
-// If this option is not used then fig uses the tag `fig`.
+// If this option is not used then confucius uses the tag `fig`.
 func ProfileLayout(layout string) Option {
-	return func(f *fig) {
-		f.profileLayout = layout
+	return func(c *confucius) {
+		c.profileLayout = layout
 	}
 }

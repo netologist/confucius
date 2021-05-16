@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kkyr/fig"
+	"github.com/hasanozgan/confucius"
 )
 
 type Config struct {
@@ -17,7 +17,7 @@ type Config struct {
 
 func ExampleLoad() {
 	var cfg Config
-	err := fig.Load(&cfg, fig.File("config.json"), fig.Tag("conf"))
+	err := confucius.Load(&cfg, confucius.File("config.json"), confucius.Tag("conf"))
 	fmt.Println(err)
 
 	// Output:

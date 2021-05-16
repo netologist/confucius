@@ -1,4 +1,4 @@
-module github.com/kkyr/fig
+module github.com/hasanozgan/confucius
 
 go 1.16
 
