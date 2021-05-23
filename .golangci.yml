@@ -16,6 +16,7 @@ issues:
         - funlen
         - scopelint
         - gocognit
+        - gochecknoglobals
     - path: doc\.go
       linters:
         - lll

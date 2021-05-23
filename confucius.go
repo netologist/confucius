@@ -1,13 +1,16 @@
 package confucius
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -32,7 +35,44 @@ const (
 	// You should use `config` for filename, `test` for profile, `yaml` for extension.
 	// Example; config-test.yaml
 	DefaultProfileLayout = "config.test.yaml"
+	// MainFileIndicator is config file type indicator
+	MainFileIndicator = "#main"
+	// MainFileIndicator is config file type indicator
+	ProfileFileIndicator = "#profile"
+	// FileEmbedLocationInditcator is config file location indicator
+	EmbedLocationInditcator = "#embed"
+	// FileEmbedLocationInditcator is config file location indicator
+	LocalLocationInditcator = "#local"
 )
+
+type decodedObject map[string]interface{}
+
+func defaultConfucius() *confucius {
+	return &confucius{
+		filename:      DefaultFilename,
+		dirs:          []string{DefaultDir},
+		tag:           DefaultTag,
+		timeLayout:    DefaultTimeLayout,
+		profileLayout: DefaultProfileLayout,
+	}
+}
+
+type confucius struct {
+	useEnv              bool
+	useReader           bool
+	useEmbedFS          bool
+	dirs                []string
+	profiles            []string
+	expectedConfigFiles []string
+	filename            string
+	tag                 string
+	timeLayout          string
+	envPrefix           string
+	profileLayout       string
+	readerConfig        io.Reader
+	readerDecoder       Decoder
+	embedFS             embed.FS
+}
 
 // Load reads a configuration file and loads it into the given struct. The
 // parameter `cfg` must be a pointer to a struct.
@@ -67,72 +107,26 @@ func Load(cfg interface{}, options ...Option) error {
 	return confucius.Load(cfg)
 }
 
-func defaultConfucius() *confucius {
-	return &confucius{
-		filename:      DefaultFilename,
-		dirs:          []string{DefaultDir},
-		tag:           DefaultTag,
-		timeLayout:    DefaultTimeLayout,
-		profileLayout: DefaultProfileLayout,
-	}
-}
-
-type confucius struct {
-	useEnv        bool
-	useReader     bool
-	dirs          []string
-	profiles      []string
-	filename      string
-	tag           string
-	timeLayout    string
-	envPrefix     string
-	profileLayout string
-	readerConfig  io.Reader
-	readerDecoder Decoder
-}
-
 func (c *confucius) Load(cfg interface{}) (err error) {
 	if !isStructPtr(cfg) {
 		return fmt.Errorf("cfg must be a pointer to a struct")
 	}
 
-	readerVals := make(map[string]interface{})
-
-	file, err := c.findCfgFile()
-	if !c.useReader && err != nil {
-		return err
-	}
-
-	vals, err := c.decodeFile(file)
-	if !c.useReader && err != nil {
-		return err
-	}
-
+	vals := make(decodedObject)
 	if c.useReader {
-		readerVals, err = c.decodeReader(c.readerConfig, c.readerDecoder)
+		vals, err = c.decodeReader(c.readerConfig, c.readerDecoder)
 		if err != nil {
 			return err
 		}
-		if err := mergo.Merge(&readerVals, vals, mergo.WithOverride, mergo.WithTypeCheck); err != nil {
-			return err
-		}
-		vals = readerVals
 	}
 
-	for _, profile := range c.profiles {
-		profileFile, err := c.findProfileCfgFile(profile)
-		if err != nil {
-			return err
-		}
+	files, err := c.findFiles()
+	if err != nil {
+		return err
+	}
 
-		profileVals, err := c.decodeFile(profileFile)
-		if err != nil {
-			return fmt.Errorf("%v, filename: %s", err, profileFile)
-		}
-
-		if err := mergo.Merge(&vals, profileVals, mergo.WithOverride, mergo.WithTypeCheck); err != nil {
-			return err
-		}
+	if vals, err = c.decodeFiles(files, vals); err != nil {
+		return err
 	}
 
 	if err := c.decodeMap(vals, cfg); err != nil {
@@ -140,6 +134,165 @@ func (c *confucius) Load(cfg interface{}) (err error) {
 	}
 
 	return c.processCfg(cfg)
+}
+
+func (c *confucius) findFiles() ([]string, error) {
+	c.initExpectedConfigFiles()
+
+	result := []string{}
+	files, err := c.findEmbedFiles()
+	if err != nil {
+		return result, err
+	}
+	result = append(result, files...)
+	result = append(result, c.findLocalFiles()...)
+
+	if len(c.expectedConfigFiles) > 0 && !c.useReader {
+		return nil, fmt.Errorf("\"%s\" file(s) not found: %w",
+			strings.Join(c.expectedConfigFiles, "\", \""),
+			ErrFileNotFound,
+		)
+	}
+
+	sort.StringSlice(result).Sort()
+	return result, nil
+}
+
+func (c *confucius) findLocalFiles() (acc []string) {
+	found := map[string]bool{}
+	for _, dir := range c.dirs {
+		path := filepath.Join(dir, c.filename)
+		if fileExists(path) && !found[c.filename] {
+			found[c.filename] = true
+			c.removeFromExpectedList(c.filename)
+			acc = append(acc,
+				fmt.Sprintf("%s:%s=%s", LocalLocationInditcator, MainFileIndicator, path),
+			)
+		}
+
+		for idx, profile := range c.profiles {
+			profileName := c.profileFileName(profile)
+			path := filepath.Join(dir, profileName)
+
+			if fileExists(path) && !found[profileName] {
+				found[profileName] = true
+				c.removeFromExpectedList(profileName)
+				acc = append(acc,
+					fmt.Sprintf("%s:%s_%02d_%s=%s", LocalLocationInditcator, ProfileFileIndicator, idx, profile, path),
+				)
+			}
+		}
+	}
+	return
+}
+
+func (c *confucius) findEmbedFiles() (acc []string, err error) {
+	found := map[string]bool{}
+	if c.useEmbedFS {
+		err = c.walkEmbedDir(&acc, found, ".")
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (c confucius) fileExists(filename string) string {
+	if c.filename == filename {
+		return MainFileIndicator
+	}
+
+	for idx, profile := range c.profiles {
+		profileName := c.profileFileName(profile)
+
+		if profileName == filename {
+			return fmt.Sprintf("%s_%02d_%s", ProfileFileIndicator, idx, profile)
+		}
+	}
+	return ""
+}
+
+func (c *confucius) walkEmbedDir(accumulator *[]string, found map[string]bool, path string) error {
+	entries, err := c.embedFS.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		return !entries[i].IsDir()
+	})
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			p := filepath.Join(path, entry.Name())
+			if err := c.walkEmbedDir(accumulator, found, p); err != nil {
+				return err
+			}
+		} else if tag := c.fileExists(entry.Name()); tag != "" && !found[entry.Name()] {
+			found[entry.Name()] = true
+			c.removeFromExpectedList(entry.Name())
+			fullPath := path + "/" + entry.Name()
+			*accumulator = append(*accumulator, fmt.Sprintf("%s:%s=%s", EmbedLocationInditcator, tag, fullPath))
+		} else {
+			log.Printf("file not found: %+v", entry.Name())
+		}
+	}
+	return nil
+}
+
+func (c *confucius) initExpectedConfigFiles() {
+	c.expectedConfigFiles = []string{c.filename}
+
+	for _, profile := range c.profiles {
+		c.expectedConfigFiles = append(c.expectedConfigFiles, c.profileFileName(profile))
+	}
+}
+
+func (c *confucius) removeFromExpectedList(file string) {
+	result := []string{}
+	for _, expected := range c.expectedConfigFiles {
+		if expected == file {
+			continue
+		}
+		result = append(result, expected)
+	}
+	c.expectedConfigFiles = result
+}
+
+func (c *confucius) decodeEmbedFile(file string) (vals decodedObject, err error) {
+	fd, err := c.embedFS.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+
+	return c.decodeReader(fd, Decoder(filepath.Ext(file)))
+}
+
+func (c *confucius) decodeFiles(files []string, origin decodedObject) (vals decodedObject, err error) {
+	vals = origin
+	for _, file := range files {
+		fileVals := decodedObject{}
+		sections := strings.Split(file, "=")
+
+		if strings.Contains(file, EmbedLocationInditcator) {
+			fileVals, err = c.decodeEmbedFile(sections[1])
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if strings.Contains(file, LocalLocationInditcator) {
+			fileVals, err = c.decodeFile(sections[1])
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if err := mergo.Merge(&vals, fileVals, mergo.WithOverride, mergo.WithTypeCheck); err != nil {
+			return nil, err
+		}
+	}
+	return vals, nil
 }
 
 func (c *confucius) profileFileName(profile string) string {
@@ -151,29 +304,8 @@ func (c *confucius) profileFileName(profile string) string {
 	return filename
 }
 
-func (c *confucius) findProfileCfgFile(profile string) (path string, err error) {
-	file := c.profileFileName(profile)
-	for _, dir := range c.dirs {
-		path = filepath.Join(dir, file)
-		if fileExists(path) {
-			return
-		}
-	}
-	return "", fmt.Errorf("%s: %w", file, ErrFileNotFound)
-}
-
-func (c *confucius) findCfgFile() (path string, err error) {
-	for _, dir := range c.dirs {
-		path = filepath.Join(dir, c.filename)
-		if fileExists(path) {
-			return
-		}
-	}
-	return "", fmt.Errorf("%s: %w", c.filename, ErrFileNotFound)
-}
-
-// decodeFile reads the file and unmarshalls it using a decoder based on the file extension.
-func (c *confucius) decodeFile(file string) (map[string]interface{}, error) {
+// decodeFile reads the file and unmarshalls // it using a decoder based on the file extension.
+func (c *confucius) decodeFile(file string) (decodedObject, error) {
 	fd, err := os.Open(file)
 	if err != nil {
 		return nil, err
@@ -183,8 +315,8 @@ func (c *confucius) decodeFile(file string) (map[string]interface{}, error) {
 	return c.decodeReader(fd, Decoder(filepath.Ext(file)))
 }
 
-func (c *confucius) decodeReader(reader io.Reader, decoder Decoder) (map[string]interface{}, error) {
-	vals := make(map[string]interface{})
+func (c *confucius) decodeReader(reader io.Reader, decoder Decoder) (decodedObject, error) {
+	vals := make(decodedObject)
 
 	switch decoder {
 	case ".yaml", ".yml":
@@ -210,8 +342,8 @@ func (c *confucius) decodeReader(reader io.Reader, decoder Decoder) (map[string]
 	return vals, nil
 }
 
-// decodeMap decodes a map of values into result using the mapstructure library.
-func (c *confucius) decodeMap(m map[string]interface{}, result interface{}) error {
+// decodeMap decodes a map of va// lues into result using the mapstructure library.
+func (c *confucius) decodeMap(m decodedObject, result interface{}) error {
 	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		WeaklyTypedInput: true,
 		Result:           result,

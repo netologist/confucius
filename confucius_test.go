@@ -1,6 +1,7 @@
 package confucius
 
 import (
+	"embed"
 	"errors"
 	"fmt"
 	"os"
@@ -136,6 +137,9 @@ func validPodConfig() Pod {
 	return pod
 }
 
+//go:embed testdata/embed
+var embedFS embed.FS
+
 func Test_confucius_Load(t *testing.T) {
 	for _, f := range []string{"pod.yaml", "pod.json", "pod.toml"} {
 		t.Run(f, func(t *testing.T) {
@@ -152,6 +156,215 @@ func Test_confucius_Load(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_confucius_findFiles(t *testing.T) {
+	t.Run("happy path", func(t *testing.T) {
+		var cfg Pod
+		err := Load(&cfg,
+			File("pod.yaml"),
+			Dirs(filepath.Join("testdata", "valid")),
+			EmbedFS(embedFS),
+		)
+
+		if err != nil {
+			t.Fatalf("expected err: %+v", err)
+		}
+	})
+
+	t.Run("main file not found", func(t *testing.T) {
+		var cfg Pod
+		err := Load(&cfg,
+			File("not-found.yaml"),
+			Dirs(filepath.Join("testdata", "valid")),
+			EmbedFS(embedFS),
+		)
+
+		if err == nil {
+			t.Fatalf("expected err")
+		}
+	})
+
+	t.Run("profile file not found", func(t *testing.T) {
+		var cfg Pod
+		err := Load(&cfg,
+			File("pod.yaml"),
+			Dirs(filepath.Join("testdata", "valid")),
+			EmbedFS(embedFS),
+			Profiles("abc"),
+		)
+
+		if err == nil {
+			t.Fatalf("expected err")
+		}
+	})
+
+	t.Run("no file not found error when using string", func(t *testing.T) {
+		var cfg struct {
+			name string `conf:"name"`
+		}
+		err := Load(&cfg,
+			String(`name: "john doe"`, DecoderYaml),
+		)
+
+		if err != nil {
+			t.Fatalf("expected err: %+v", err)
+		}
+	})
+}
+
+func Test_confucius_findLocalFiles(t *testing.T) {
+	conf := defaultConfucius()
+	conf.filename = "pod.yaml"
+	conf.dirs = []string{filepath.Join("testdata", "valid")}
+
+	acc := conf.findLocalFiles()
+	if !reflect.DeepEqual(acc, []string{"#local:#main=testdata/valid/pod.yaml"}) {
+		t.Fatalf("inconsistent: %+v", acc)
+	}
+}
+
+func Test_confucius_findEmbedFiles(t *testing.T) {
+	conf := defaultConfucius()
+	conf.useEmbedFS = true
+	conf.embedFS = embedFS
+	conf.filename = "pod.yaml"
+
+	if acc, err := conf.findEmbedFiles(); err != nil {
+		t.Fatalf("expected err: %+v", err)
+	} else if !reflect.DeepEqual(acc, []string{"#embed:#main=testdata/embed/pod.yaml"}) {
+		t.Fatalf("inconsistent: %+v", acc)
+	}
+}
+
+func Test_confucius_fileExists(t *testing.T) {
+	conf := defaultConfucius()
+
+	t.Run("main", func(t *testing.T) {
+		if tag := conf.fileExists("config.yaml"); tag != "#main" {
+			t.Fatal("main not found")
+		}
+	})
+
+	t.Run("profiles", func(t *testing.T) {
+		conf.profiles = []string{"e2e"}
+
+		if tag := conf.fileExists("config.e2e.yaml"); tag != "#profile_00_e2e" {
+			t.Fatal("not found in profiles")
+		}
+	})
+
+	t.Run("profiles with order", func(t *testing.T) {
+		conf.profiles = []string{"e2e", "uat"}
+
+		if tag := conf.fileExists("config.e2e.yaml"); tag != "#profile_00_e2e" {
+			t.Fatal("not found in profiles")
+		}
+
+		if tag := conf.fileExists("config.uat.yaml"); tag != "#profile_01_uat" {
+			t.Fatal("not found in profiles")
+		}
+	})
+
+	t.Run("not found in main and profiles", func(t *testing.T) {
+		if tag := conf.fileExists("pod.yaml"); tag != "" {
+			t.Fatal("file not found")
+		}
+	})
+}
+
+func Test_confucius_walkEmbedDir(t *testing.T) {
+	conf := defaultConfucius()
+	conf.useEmbedFS = true
+	conf.embedFS = embedFS
+	conf.filename = "pod.yaml"
+	conf.profiles = []string{"dev", "e2e"}
+
+	accumulator := []string{}
+	found := map[string]bool{}
+
+	t.Run("success", func(t *testing.T) {
+		err := conf.walkEmbedDir(&accumulator, found, ".")
+
+		if err != nil {
+			t.Fatalf("not expected: %+v", err)
+		}
+
+		expected := []string{
+			"#embed:#main=testdata/embed/pod.yaml",
+			"#embed:#profile_01_e2e=testdata/embed/pod.e2e.yaml",
+		}
+
+		if !reflect.DeepEqual(accumulator, expected) {
+			t.Fatal("accumulator not match")
+		}
+	})
+
+	t.Run("when embed file is not read", func(t *testing.T) {
+		err := conf.walkEmbedDir(&accumulator, found, "bad-path")
+		if err == nil {
+			t.Fatal("not expected")
+		}
+	})
+}
+
+func Test_confucius_initExpectedConfigFiles(t *testing.T) {
+	conf := defaultConfucius()
+	conf.profiles = []string{"e2e", "dev", "uat"}
+
+	if len(conf.expectedConfigFiles) != 0 {
+		t.Fatal("it should empty")
+	}
+
+	conf.initExpectedConfigFiles()
+
+	if len(conf.expectedConfigFiles) != 4 {
+		t.Fatal("unexpected file count")
+	}
+
+	if !reflect.DeepEqual(conf.expectedConfigFiles, []string{
+		"config.yaml", "config.e2e.yaml", "config.dev.yaml", "config.uat.yaml",
+	}) {
+		t.Fatalf("inconsistent config files %+v", conf.expectedConfigFiles)
+	}
+}
+
+func Test_confucius_removeFromExpectedList(t *testing.T) {
+	conf := defaultConfucius()
+	conf.initExpectedConfigFiles()
+
+	conf.removeFromExpectedList("config.yaml")
+
+	if !reflect.DeepEqual(conf.expectedConfigFiles, []string{}) {
+		t.Fatalf("inconsistent config files %+v", conf.expectedConfigFiles)
+	}
+}
+
+func Test_confucius_decodeEmbedFile(t *testing.T) {
+	conf := defaultConfucius()
+	conf.filename = "pod.yaml"
+	conf.useEmbedFS = true
+	conf.embedFS = embedFS
+
+	t.Run("when not found", func(t *testing.T) {
+		if _, err := conf.decodeEmbedFile("testdata/embed/pod.yaml"); err != nil {
+			t.Fatalf("unexpected error, %+v", err)
+		}
+	})
+
+	t.Run("when not found", func(t *testing.T) {
+		if _, err := conf.decodeEmbedFile("abc.yaml"); err == nil {
+			t.Fatal("unexpected error")
+		}
+	})
+}
+
+func Test_confucius_decodeFiles(t *testing.T) {
+	// conf := defaultConfucius()
+	// t.Run("when embedded file not found", func(t *testing.T) {
+	// 	// conf.decodeFiles([]string{"embed:"})
+
+	// })
 }
 
 func Test_confucius_replaceEnvironments(t *testing.T) {
@@ -557,7 +770,6 @@ func Test_confucius_Return_Error_WhenLoad_Reader_Conf_File(t *testing.T) {
 func Test_confucius_Load_Server_With_Profile(t *testing.T) {
 	for _, f := range []string{"server.yaml", "server.json", "server.toml"} {
 		t.Run(f, func(t *testing.T) {
-			fmt.Println(f)
 			type Server struct {
 				Host   string `conf:"host"`
 				Logger struct {
@@ -621,70 +833,6 @@ func Test_confucius_Load_Server_With_Profile_When_Config_Is_Invalid(t *testing.T
 	}
 }
 
-func Test_confucius_findCfgFile(t *testing.T) {
-	t.Run("finds existing file", func(t *testing.T) {
-		confucius := defaultConfucius()
-		confucius.filename = "pod.yaml"
-		confucius.dirs = []string{".", "testdata", filepath.Join("testdata", "valid")}
-
-		file, err := confucius.findCfgFile()
-		if err != nil {
-			t.Fatalf("unexpected err: %v", err)
-		}
-
-		want := filepath.Join("testdata", "valid", "pod.yaml")
-		if want != file {
-			t.Fatalf("want file %s, got %s", want, file)
-		}
-	})
-
-	t.Run("non-existing file returns ErrFileNotFound", func(t *testing.T) {
-		confucius := defaultConfucius()
-		confucius.filename = "nope.nope"
-		confucius.dirs = []string{".", "testdata", filepath.Join("testdata", "valid")}
-
-		file, err := confucius.findCfgFile()
-		if err == nil {
-			t.Fatalf("expected err, got file %s", file)
-		}
-		if !errors.Is(err, ErrFileNotFound) {
-			t.Errorf("expected err %v, got %v", ErrFileNotFound, err)
-		}
-	})
-}
-
-func Test_confucius_findProfileCfgFile(t *testing.T) {
-	t.Run("finds existing file", func(t *testing.T) {
-		confucius := defaultConfucius()
-		confucius.filename = "server.yaml"
-		confucius.dirs = []string{".", "testdata", filepath.Join("testdata", "valid")}
-
-		file, err := confucius.findProfileCfgFile("test")
-		if err != nil {
-			t.Fatalf("unexpected err: %v", err)
-		}
-
-		want := filepath.Join("testdata", "valid", "server.test.yaml")
-		if want != file {
-			t.Fatalf("want file %s, got %s", want, file)
-		}
-	})
-
-	t.Run("non-existing file returns ErrFileNotFound", func(t *testing.T) {
-		confucius := defaultConfucius()
-		confucius.filename = "server.yaml"
-		confucius.dirs = []string{".", "testdata", filepath.Join("testdata", "valid")}
-
-		file, err := confucius.findProfileCfgFile("e2e")
-		if err == nil {
-			t.Fatalf("expected err, got file %s", file)
-		}
-		if !errors.Is(err, ErrFileNotFound) {
-			t.Errorf("expected err %v, got %v", ErrFileNotFound, err)
-		}
-	})
-}
-
 func Test_confucius_decodeFile(t *testing.T) {
 	confucius := defaultConfucius()
 
@@ -727,10 +875,10 @@ func Test_confucius_decodeMap(t *testing.T) {
 	confucius := defaultConfucius()
 	confucius.tag = "conf"
 
-	m := map[string]interface{}{
+	m := decodedObject{
 		"log_level": "debug",
 		"severity":  "5",
-		"server": map[string]interface{}{
+		"server": decodedObject{
 			"ports":  []int{443, 80},
 			"secure": 1,
 		},

@@ -1,7 +1,7 @@
 package embed
 
 import (
-	_ "embed"
+	"embed"
 	"fmt"
 
 	"github.com/hasanozgan/confucius"
@@ -21,17 +21,27 @@ type Config struct {
 }
 
 //go:embed reference.yaml
-var config string
+var reference string
+
+//go:embed embedded_config
+var fs embed.FS
 
 func ExampleLoad() {
 
 	var cfg Config
-	if err := confucius.Load(&cfg, confucius.String(config, confucius.DecoderYaml)); err == nil {
+	err := confucius.Load(&cfg,
+		confucius.String(reference, confucius.DecoderYaml),
+		confucius.Profiles("e2e", "uat"),
+		confucius.ProfileLayout("test.yaml"),
+		confucius.Dirs("local_config"),
+		confucius.EmbedFS(fs),
+	)
+	if err == nil {
 		fmt.Printf("%+v", cfg)
 	} else {
 		fmt.Print(err)
 	}
 
 	// Output:
-	// {Database:{Host:db.prod.example.com Port:5432 Name:orders Username:admin Password:S3cr3t-P455w0rd} Kafka:{Host:[kafka1.prod.example.com kafka2.prod.example.com]}}
+	// {Database:{Host:db.uat.example.com Port:5432 Name:users Username:admin Password:secret} Kafka:{Host:[kafka.uat.example.com]}}
 }

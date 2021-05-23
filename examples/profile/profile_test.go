@@ -24,6 +24,8 @@ func ExampleLoad() {
 	var cfg Config
 	if err := confucius.Load(&cfg); err == nil {
 		fmt.Printf("%+v", cfg)
+	} else {
+		fmt.Println(err)
 	}
 
 	// Output:
@@ -36,6 +38,8 @@ func ExampleLoad_with_environment_in_config_file() {
 	var cfg Config
 	if err := confucius.Load(&cfg); err == nil {
 		fmt.Printf("%+v", cfg)
+	} else {
+		fmt.Println(err)
 	}
 
 	// Output:

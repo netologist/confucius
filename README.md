@@ -17,6 +17,7 @@ I added extra features in project and send a PR. But they were not accepted. Tha
 - Define your **configuration**, **validations** and **defaults** in a single location
 - Optionally **load from the environment** as well
 - Optionally **profiles** as well
+- You can use go:embed file system. You can find example usage in `examples/embed` folder
 - Set environment variable in config file with default value
 - Only **4** external dependencies
 - Full support for`time.Time` & `time.Duration`

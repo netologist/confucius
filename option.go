@@ -1,6 +1,7 @@
 package confucius
 
 import (
+	"embed"
 	"io"
 	"strings"
 )
@@ -133,5 +134,13 @@ func Profiles(profiles ...string) Option {
 func ProfileLayout(layout string) Option {
 	return func(c *confucius) {
 		c.profileLayout = layout
+	}
+}
+
+// EmbedFS returns an option that configures the embed fs.
+func EmbedFS(fs embed.FS) Option {
+	return func(c *confucius) {
+		c.useEmbedFS = true
+		c.embedFS = fs
 	}
 }
