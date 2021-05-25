@@ -708,6 +708,25 @@ func Test_confucius_Load_String_Conf_File(t *testing.T) {
 	}
 }
 
+func Test_confucius_Load_Environment_Conf_File(t *testing.T) {
+	os.Setenv("MYAPP_HOST", "127.0.0.1")
+
+	type Server struct {
+		Host string `conf:"host"`
+	}
+	var cfg Server
+	err := Load(&cfg, UseEnv("myapp"))
+	if err != nil {
+		t.Fatalf("expected err: %v", err)
+	}
+
+	want := Server{Host: "127.0.0.1"}
+
+	if !reflect.DeepEqual(want, cfg) {
+		t.Errorf("\nwant %+v\ngot %+v", want, cfg)
+	}
+}
+
 func Test_confucius_Load_And_Merge_String_With_Conf_File(t *testing.T) {
 	os.Unsetenv("SERVICE_HOST")
 	type Server struct {

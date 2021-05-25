@@ -121,7 +121,7 @@ func (c *confucius) Load(cfg interface{}) (err error) {
 	}
 
 	files, err := c.findFiles()
-	if err != nil {
+	if err != nil && !(c.useReader || c.useEnv) {
 		return err
 	}
 
@@ -147,7 +147,7 @@ func (c *confucius) findFiles() ([]string, error) {
 	result = append(result, files...)
 	result = append(result, c.findLocalFiles()...)
 
-	if len(c.expectedConfigFiles) > 0 && !c.useReader {
+	if len(c.expectedConfigFiles) > 0 {
 		return nil, fmt.Errorf("\"%s\" file(s) not found: %w",
 			strings.Join(c.expectedConfigFiles, "\", \""),
 			ErrFileNotFound,
