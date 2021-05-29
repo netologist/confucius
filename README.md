@@ -24,6 +24,7 @@ I added extra features in project and send a PR. But they were not accepted. Tha
 - Tiny API
 - Decoders for `.yaml`, `.json` and `.toml` files
 - Set String and Reader options for reference config. You can find example usage in `examples/reader` folder
+- Added logger support
 
 ## Getting Started
 
@@ -103,6 +104,45 @@ confucius.Load(&cfg,
   confucius.ProfileLayout("config-test.yaml") // DEFAULT: config.test.yaml
 ) // searches settings-test.json, settings-integration.json
 
+```
+
+### String and Reader
+
+You can use `string or reader` for configuration
+```go
+confucius.Load(&cfg, 
+  confucius.String(`{"application": {"port": 9000}}`, confucius.DecoderJSON)
+)
+
+```
+### go:embed support
+
+You can use `go:embed` file system for config files
+
+```go
+
+//go:embed config
+var fs embed.FS
+
+confucius.Load(&cfg,
+  confucius.EmbedFS(fs),
+)
+```
+
+### Logger support
+
+You can integrate with your log library confucius's logs
+
+```go
+confucius.Load(&cfg,
+  confucius.Logger(
+    confucius.SetLevel(confucius.ErrorLevel),
+    confucius.SetOutput(os.Stdout),
+    confucius.Callback(func(level confucius.LogLevel, message, file string, line int) {
+      // log callback for logrus, zap or etc...
+    }),
+  ),
+)
 ```
 
 ## Environment

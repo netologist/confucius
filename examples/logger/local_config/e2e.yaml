@@ -1,0 +1,9 @@
+database:
+  host: "db.e2e.example.com"
+  port: 5432
+  name: "users"
+  username: "admin"
+  password: "secret"
+kafka:
+  host:
+    - "kafka.e2e.example.com"

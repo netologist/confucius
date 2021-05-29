@@ -3,6 +3,9 @@ package confucius
 import (
 	"embed"
 	"io"
+	"reflect"
+	"runtime"
+	"sort"
 	"strings"
 )
 
@@ -142,5 +145,18 @@ func EmbedFS(fs embed.FS) Option {
 	return func(c *confucius) {
 		c.useEmbedFS = true
 		c.embedFS = fs
+	}
+}
+
+// Logger returns an option that configures the logger.
+func Logger(opts ...LogOption) Option {
+	return func(c *confucius) {
+		sort.Slice(opts, func(i, j int) bool {
+			name := runtime.FuncForPC(reflect.ValueOf(opts[i]).Pointer()).Name()
+			return strings.Contains(name, "Callback")
+		})
+		for _, opt := range opts {
+			opt(c.logger)
+		}
 	}
 }

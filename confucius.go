@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -39,10 +38,10 @@ const (
 	MainFileIndicator = "#main"
 	// MainFileIndicator is config file type indicator
 	ProfileFileIndicator = "#profile"
-	// FileEmbedLocationInditcator is config file location indicator
-	EmbedLocationInditcator = "#embed"
-	// FileEmbedLocationInditcator is config file location indicator
-	LocalLocationInditcator = "#local"
+	// FileEmbedLocationIndicator is config file location indicator
+	EmbedLocationIndicator = "#embed"
+	// FileEmbedLocationIndicator is config file location indicator
+	LocalLocationIndicator = "#local"
 )
 
 type decodedObject map[string]interface{}
@@ -54,6 +53,7 @@ func defaultConfucius() *confucius {
 		tag:           DefaultTag,
 		timeLayout:    DefaultTimeLayout,
 		profileLayout: DefaultProfileLayout,
+		logger:        defaultLogger(),
 	}
 }
 
@@ -72,6 +72,7 @@ type confucius struct {
 	readerConfig        io.Reader
 	readerDecoder       Decoder
 	embedFS             embed.FS
+	logger              *logger
 }
 
 // Load reads a configuration file and loads it into the given struct. The
@@ -98,16 +99,18 @@ type confucius struct {
 //
 // A single field may not be marked as both `required` and `default`.
 func Load(cfg interface{}, options ...Option) error {
-	confucius := defaultConfucius()
+	c := defaultConfucius()
 
 	for _, opt := range options {
-		opt(confucius)
+		opt(c)
 	}
 
-	return confucius.Load(cfg)
+	return c.Load(cfg)
 }
 
 func (c *confucius) Load(cfg interface{}) (err error) {
+	c.logger.Debug("confucius starting")
+
 	if !isStructPtr(cfg) {
 		return fmt.Errorf("cfg must be a pointer to a struct")
 	}
@@ -166,7 +169,7 @@ func (c *confucius) findLocalFiles() (acc []string) {
 			found[c.filename] = true
 			c.removeFromExpectedList(c.filename)
 			acc = append(acc,
-				fmt.Sprintf("%s:%s=%s", LocalLocationInditcator, MainFileIndicator, path),
+				fmt.Sprintf("%s:%s=%s", LocalLocationIndicator, MainFileIndicator, path),
 			)
 		}
 
@@ -178,7 +181,7 @@ func (c *confucius) findLocalFiles() (acc []string) {
 				found[profileName] = true
 				c.removeFromExpectedList(profileName)
 				acc = append(acc,
-					fmt.Sprintf("%s:%s_%02d_%s=%s", LocalLocationInditcator, ProfileFileIndicator, idx, profile, path),
+					fmt.Sprintf("%s:%s_%02d_%s=%s", LocalLocationIndicator, ProfileFileIndicator, idx, profile, path),
 				)
 			}
 		}
@@ -222,18 +225,17 @@ func (c *confucius) walkEmbedDir(accumulator *[]string, found map[string]bool, p
 	})
 
 	for _, entry := range entries {
+		fullPath := filepath.Join(path, entry.Name())
 		if entry.IsDir() {
-			p := filepath.Join(path, entry.Name())
-			if err := c.walkEmbedDir(accumulator, found, p); err != nil {
+			if err := c.walkEmbedDir(accumulator, found, fullPath); err != nil {
 				return err
 			}
 		} else if tag := c.fileExists(entry.Name()); tag != "" && !found[entry.Name()] {
 			found[entry.Name()] = true
 			c.removeFromExpectedList(entry.Name())
-			fullPath := path + "/" + entry.Name()
-			*accumulator = append(*accumulator, fmt.Sprintf("%s:%s=%s", EmbedLocationInditcator, tag, fullPath))
+			*accumulator = append(*accumulator, fmt.Sprintf("%s:%s=%s", EmbedLocationIndicator, tag, fullPath))
 		} else {
-			log.Printf("file not found: %+v", entry.Name())
+			c.logger.Debug("file not found: %+v", fullPath)
 		}
 	}
 	return nil
@@ -274,14 +276,14 @@ func (c *confucius) decodeFiles(files []string, origin decodedObject) (vals deco
 		fileVals := decodedObject{}
 		sections := strings.Split(file, "=")
 
-		if strings.Contains(file, EmbedLocationInditcator) {
+		if strings.Contains(file, EmbedLocationIndicator) {
 			fileVals, err = c.decodeEmbedFile(sections[1])
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		if strings.Contains(file, LocalLocationInditcator) {
+		if strings.Contains(file, LocalLocationIndicator) {
 			fileVals, err = c.decodeFile(sections[1])
 			if err != nil {
 				return nil, err
