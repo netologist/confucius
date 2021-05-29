@@ -19,7 +19,7 @@ func Test_defaultLogger(t *testing.T) {
 		t.Fatal("default writer should be io.Discard")
 	}
 
-	if !l.defaultCallback {
+	if l.useCallback {
 		t.Fatal("should set default callback")
 	}
 }

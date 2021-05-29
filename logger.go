@@ -45,10 +45,10 @@ const (
 
 func defaultLogger() *logger {
 	return &logger{
-		level:           DebugLevel,
-		output:          io.Discard,
-		defaultCallback: true,
-		callback:        defaultCallback(io.Discard),
+		level:       DebugLevel,
+		output:      io.Discard,
+		useCallback: false,
+		callback:    defaultCallback(io.Discard),
 	}
 }
 
@@ -68,12 +68,9 @@ func defaultCallback(output io.Writer) LogCallback {
 
 func Callback(callback LogCallback) LogOption {
 	return func(l *logger) {
-		if l.defaultCallback {
-			l.defaultCallback = false
-			l.Warn("log output feature is disabled")
-		}
-
+		l.useCallback = true
 		l.callback = callback
+		l.output = io.Discard
 	}
 }
 
@@ -85,20 +82,20 @@ func SetLevel(level LogLevel) LogOption {
 
 func SetOutput(writer io.Writer) LogOption {
 	return func(l *logger) {
-		if l.defaultCallback {
+		if !l.useCallback {
 			l.output = writer
 			l.callback = defaultCallback(writer)
 		} else {
-			l.Warn("log output feature is disabled")
+			l.Warn("log output feature is not usable when using callback")
 		}
 	}
 }
 
 type logger struct {
-	defaultCallback bool
-	callback        LogCallback
-	level           LogLevel
-	output          io.Writer
+	useCallback bool
+	callback    LogCallback
+	level       LogLevel
+	output      io.Writer
 }
 
 func (l *logger) Print(level LogLevel, message string, args ...interface{}) {

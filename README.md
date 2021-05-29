@@ -109,12 +109,20 @@ confucius.Load(&cfg,
 ### String and Reader
 
 You can use `string or reader` for configuration
+
 ```go
 confucius.Load(&cfg, 
-  confucius.String(`{"application": {"port": 9000}}`, confucius.DecoderJSON)
+  confucius.String(`{"application": {"port": 9000}}`, confucius.DecoderJSON),
 )
-
 ```
+
+```go
+configReader := strings.NewReader(`{"application": {"port": 9000}}`)
+confucius.Load(&cfg,
+  confucius.Reader(configReader, confucius.DecoderJSON),
+)
+```
+
 ### go:embed support
 
 You can use `go:embed` file system for config files
