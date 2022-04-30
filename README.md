@@ -8,7 +8,7 @@
 
 # confucius
 
-confucius is forked from [kkyr/fig](github.com/kkyr/fig) project. fig is a tiny library for loading an application's config file and its environment into a Go struct. Individual fields can have default values defined or be marked as required.
+confucius is forked from [kkyr/fig](https://github.com/kkyr/fig) project. fig is a tiny library for loading an application's config file and its environment into a Go struct. Individual fields can have default values defined or be marked as required.
 
 I added extra features in project and send a PR. But they were not accepted. That reason I was forked that project.
 
