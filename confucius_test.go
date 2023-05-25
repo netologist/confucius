@@ -379,6 +379,7 @@ func Test_confucius_replaceEnvironments(t *testing.T) {
 		hasError bool
 	}{
 		{name: "environment with default value", text: "/x/y/${BAZ:a}", want: "/x/y/a"},
+		{name: "environment with default value when contains column", text: "/x/y/${BAZ:http://localhost:9000}", want: "/x/y/http://localhost:9000"},
 		{name: "no environment tag", text: "/x/y/z", want: "/x/y/z"},
 		{name: "from environment", text: "/x/y/${FOO}", want: "/x/y/XXX"},
 		{name: "environment when is not set", text: "/x/y/${BAZ}", want: "/x/y/"},
