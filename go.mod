@@ -1,4 +1,4 @@
-module github.com/hasanozgan/confucius
+module github.com/netologist/confucius
 
 go 1.16
 
