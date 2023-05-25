@@ -1,9 +1,9 @@
 <p align="center">
-    <a href="https://pkg.go.dev/github.com/hasanozgan/confucius?tab=doc"><img src="https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white" alt="godoc" title="godoc"/></a>
+    <a href="https://pkg.go.dev/github.com/netologist/confucius?tab=doc"><img src="https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white" alt="godoc" title="godoc"/></a>
     <a href="https://travis-ci.org/hasanozgan/confucius"><img src="https://travis-ci.org/hasanozgan/confucius.svg?branch=master" alt="build status" title="build status"/></a>
-    <a href="https://github.com/hasanozgan/confucius/releases"><img src="https://img.shields.io/github/v/tag/hasanozgan/confucius" alt="semver tag" title="semver tag"/></a>
-    <a href="https://goreportcard.com/report/github.com/hasanozgan/confucius"><img src="https://goreportcard.com/badge/github.com/hasanozgan/confucius" alt="go report card" title="go report card"/></a>
-    <a href="https://github.com/hasanozgan/confucius/blob/master/LICENSE"><img src="https://img.shields.io/github/license/hasanozgan/confucius" alt="license" title="license"/></a>
+    <a href="https://github.com/netologist/confucius/releases"><img src="https://img.shields.io/github/v/tag/hasanozgan/confucius" alt="semver tag" title="semver tag"/></a>
+    <a href="https://goreportcard.com/report/github.com/netologist/confucius"><img src="https://goreportcard.com/badge/github.com/netologist/confucius" alt="go report card" title="go report card"/></a>
+    <a href="https://github.com/netologist/confucius/blob/master/LICENSE"><img src="https://img.shields.io/github/license/hasanozgan/confucius" alt="license" title="license"/></a>
 </p>
 
 # confucius
@@ -28,7 +28,7 @@ I added extra features in project and send a PR. But they were not accepted. Tha
 
 ## Getting Started
 
-`$ go get -d github.com/hasanozgan/confucius`
+`$ go get -d github.com/netologist/confucius`
 
 Define your config file:
 
@@ -55,7 +55,7 @@ package main
 import (
   "fmt"
 
-  "github.com/hasanozgan/confucius"
+  "github.com/netologist/confucius"
 )
 
 type Config struct {
@@ -167,7 +167,7 @@ See usage [examples](/examples).
 
 ## Documentation
 
-See [go.dev](https://pkg.go.dev/github.com/hasanozgan/confucius?tab=doc) for detailed documentation.
+See [go.dev](https://pkg.go.dev/github.com/netologist/confucius?tab=doc) for detailed documentation.
 
 ## Contributing
 

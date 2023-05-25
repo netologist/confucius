@@ -85,17 +85,17 @@ type confucius struct {
 // A field can be marked as required by adding a `required` key in the field's struct tag.
 // If a required field is not set by the configuration file an error is returned.
 //
-//   type Config struct {
-//     Env string `conf:"env" validate:"required"` // or just `validate:"required"`
-//   }
+//	type Config struct {
+//	  Env string `conf:"env" validate:"required"` // or just `validate:"required"`
+//	}
 //
 // A field can be configured with a default value by adding a `default` key in the
 // field's struct tag.
 // If a field is not set by the configuration file then the default value is set.
 //
-//  type Config struct {
-//    Level string `conf:"level" default:"info"` // or just `default:"info"`
-//  }
+//	type Config struct {
+//	  Level string `conf:"level" default:"info"` // or just `default:"info"`
+//	}
 //
 // A single field may not be marked as both `required` and `default`.
 func Load(cfg interface{}, options ...Option) error {
@@ -372,13 +372,15 @@ func replaceEnvironments(str string) (result string, err error) {
 		}
 
 		s := strings.Split(value, ":")
+
 		envName := s[0]
+
 		if envValue, ok := os.LookupEnv(envName); ok {
 			result = strings.ReplaceAll(result, whole, envValue)
 		} else {
 			defaultVal := ""
 			if len(s) > 1 {
-				defaultVal = s[1]
+				defaultVal = strings.ReplaceAll(value, envName+":", "")
 			}
 			result = strings.ReplaceAll(result, whole, defaultVal)
 		}
