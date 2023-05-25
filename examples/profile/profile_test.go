@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hasanozgan/confucius"
+	"github.com/netologist/confucius"
 )
 
 type Config struct {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hasanozgan/confucius"
+	"github.com/netologist/confucius"
 )
 
 type Config struct {

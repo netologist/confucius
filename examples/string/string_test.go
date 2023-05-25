@@ -4,7 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/hasanozgan/confucius"
+	"github.com/netologist/confucius"
 )
 
 type Config struct {
