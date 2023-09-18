@@ -6,7 +6,7 @@
     <a href="https://github.com/netologist/confucius/blob/master/LICENSE"><img src="https://img.shields.io/github/license/hasanozgan/confucius" alt="license" title="license"/></a>
 </p>
 
-# confucius
+# confucius 222
 
 confucius is forked from [kkyr/fig](https://github.com/kkyr/fig) project. fig is a tiny library for loading an application's config file and its environment into a Go struct. Individual fields can have default values defined or be marked as required.
 
